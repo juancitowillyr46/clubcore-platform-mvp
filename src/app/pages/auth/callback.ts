@@ -51,6 +51,13 @@ export class AuthCallbackPage implements OnInit {
     readonly successMessage = signal('Procesamiento completado.');
 
     async ngOnInit(): Promise<void> {
+        const exchangeResult = await this.registrationService.establishSessionFromCallbackUrl();
+        if (!exchangeResult.success) {
+            this.state.set('error');
+            this.errors.set(exchangeResult.errors ?? ['No fue posible validar la sesión del callback.']);
+            return;
+        }
+
         const result = await this.registrationService.completeOnboardingAfterConfirmation();
 
         if (!result.success) {

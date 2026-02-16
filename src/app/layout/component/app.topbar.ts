@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { MenuItem } from 'primeng/api';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '@/app/layout/service/layout.service';
+import { SupabaseService } from '@/app/core/services/supabase.service';
 
 @Component({
     selector: 'app-topbar',
@@ -76,6 +77,10 @@ import { LayoutService } from '@/app/layout/service/layout.service';
                         <i class="pi pi-user"></i>
                         <span>Profile</span>
                     </button>
+                    <button type="button" class="layout-topbar-action" (click)="logout()">
+                        <i class="pi pi-sign-out"></i>
+                        <span>Cerrar sesión</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -85,11 +90,18 @@ export class AppTopbar {
     items!: MenuItem[];
 
     layoutService = inject(LayoutService);
+    private readonly supabase = inject(SupabaseService);
+    private readonly router = inject(Router);
 
     toggleDarkMode() {
         this.layoutService.layoutConfig.update((state) => ({
             ...state,
             darkTheme: !state.darkTheme
         }));
+    }
+
+    async logout(): Promise<void> {
+        await this.supabase.client.auth.signOut();
+        await this.router.navigateByUrl('/auth/login');
     }
 }

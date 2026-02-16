@@ -7,6 +7,22 @@ import { AuthCallbackResult, RegisterPayload, RegisterResult } from '../models/r
 export class RegistrationService {
     private readonly supabase = inject(SupabaseService);
 
+    async establishSessionFromCallbackUrl(): Promise<AuthCallbackResult> {
+        const params = new URLSearchParams(window.location.search);
+        const authCode = params.get('code');
+
+        if (!authCode) {
+            return { success: true };
+        }
+
+        const { error } = await this.supabase.client.auth.exchangeCodeForSession(authCode);
+        if (error) {
+            return { success: false, errors: [error.message] };
+        }
+
+        return { success: true };
+    }
+
     async registerAdminAndClub(payload: RegisterPayload): Promise<RegisterResult> {
         const validationErrors = this.validate(payload);
         if (validationErrors.length > 0) {
@@ -30,6 +46,12 @@ export class RegistrationService {
 
         if (!data.user) {
             return { success: false, errors: ['No fue posible crear el usuario en Supabase Auth.'] };
+        }
+
+        // Supabase puede devolver usuario "obfuscado" cuando el email ya existe
+        // (sin error explícito) para evitar enumeración de cuentas.
+        if ((data.user.identities ?? []).length === 0) {
+            return { success: false, errors: ['El correo electrónico ya se encuentra registrado.'] };
         }
 
         return {

@@ -7,11 +7,13 @@ Este documento aterriza tareas concretas para la HU:
 ## 1) Alcance funcional
 
 - Registro con Supabase Auth (`email`, `password`).
+- Login con Supabase Auth (`email`, `password`).
 - Confirmación de email obligatoria.
 - Post-confirmación:
   - Crear `profiles`.
   - Crear `clubs`.
   - Crear `club_members` con rol `CLUB_ADMIN`.
+- Onboarding obligatorio para completar datos del administrador y club.
 - Evitar inconsistencias (proceso transaccional en BD).
 - Usuario autenticado al finalizar callback.
 
@@ -47,6 +49,30 @@ Este documento aterriza tareas concretas para la HU:
 
 1. Agregar `/auth/callback` en `src/app/pages/auth/auth.routes.ts`.
 2. Mantener `/auth/register` activo.
+3. Crear `/onboarding/profile-club`.
+4. Proteger dashboard con guard de onboarding completo.
+5. Bloquear `/auth/login` y `/auth/register` con guard de invitado (`guestOnly`).
+
+## 2.4 Login (`/auth/login`)
+
+1. Integrar `supabase.auth.signInWithPassword(...)`.
+2. Validar email/password en frontend.
+3. Mostrar errores con `p-message`.
+4. Redirigir:
+   - onboarding incompleto -> `/onboarding/profile-club`
+   - onboarding completo -> `/`
+
+## 2.5 Onboarding (`/onboarding/profile-club`)
+
+1. Formulario obligatorio:
+   - nombre administrador
+   - teléfono club
+   - dirección club
+   - foto/logo club
+2. Guardar foto/logo en Storage (`club-assets`).
+3. Persistir:
+   - `profiles.full_name`
+   - `clubs.phone`, `clubs.address`, `clubs.photo_url`
 
 ## 3) Tareas concretas (backend Supabase)
 
@@ -89,6 +115,9 @@ create table if not exists public.clubs (
   plan_type text not null default 'TRIAL',
   max_users integer not null default 5,
   is_active boolean not null default true,
+  phone text default '',
+  address text default '',
+  photo_url text default '',
   created_at timestamptz not null default now()
 );
 ```
@@ -136,6 +165,21 @@ for select
 to authenticated
 using (id = auth.uid());
 
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own"
+on public.profiles
+for insert
+to authenticated
+with check (id = auth.uid());
+
+drop policy if exists "profiles_update_own" on public.profiles;
+create policy "profiles_update_own"
+on public.profiles
+for update
+to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
 drop policy if exists "clubs_select_member" on public.clubs;
 create policy "clubs_select_member"
 on public.clubs
@@ -150,20 +194,61 @@ using (
   )
 );
 
-drop policy if exists "club_members_select_own_club" on public.club_members;
-create policy "club_members_select_own_club"
-on public.club_members
-for select
+drop policy if exists "clubs_update_member" on public.clubs;
+create policy "clubs_update_member"
+on public.clubs
+for update
 to authenticated
 using (
-  user_id = auth.uid()
-  or exists (
+  exists (
     select 1
     from public.club_members cm
-    where cm.club_id = club_members.club_id
+    where cm.club_id = clubs.id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = clubs.id
       and cm.user_id = auth.uid()
   )
 );
+
+drop policy if exists "club_members_select_own" on public.club_members;
+create policy "club_members_select_own"
+on public.club_members
+for select
+to authenticated
+using (user_id = auth.uid());
+```
+
+```sql
+-- 7.1) Storage (bucket público club-assets)
+-- Crear bucket desde panel Storage: club-assets (public = true)
+
+drop policy if exists "club_assets_public_read" on storage.objects;
+create policy "club_assets_public_read"
+on storage.objects
+for select
+to public
+using (bucket_id = 'club-assets');
+
+drop policy if exists "club_assets_auth_upload" on storage.objects;
+create policy "club_assets_auth_upload"
+on storage.objects
+for insert
+to authenticated
+with check (bucket_id = 'club-assets');
+
+drop policy if exists "club_assets_auth_update" on storage.objects;
+create policy "club_assets_auth_update"
+on storage.objects
+for update
+to authenticated
+using (bucket_id = 'club-assets')
+with check (bucket_id = 'club-assets');
 ```
 
 ```sql
@@ -241,10 +326,13 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 ## 7) Checklist de entrega
 
 - [x] Register conectado a Supabase Auth.
+- [x] Login conectado a Supabase Auth.
 - [x] Auth callback implementado.
+- [x] Onboarding obligatorio implementado.
 - [x] Función transaccional desplegada en BD.
 - [x] RLS/policies mínimas activas.
 - [x] Cascade delete aplicado en relaciones por usuario.
 - [x] Ajuste `clubs.created_by` a `on delete set null`.
+- [x] Storage integrado para foto/logo del club.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

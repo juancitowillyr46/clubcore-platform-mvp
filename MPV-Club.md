@@ -165,8 +165,17 @@ Onboarding profesional
 📌 Implementación actual en este MVP
 
 - `register` integrado con Supabase Auth (`signUp`).
+- `login` integrado con Supabase Auth (`signInWithPassword`).
 - `/auth/callback` implementado en frontend.
 - Inicialización de tenant usando RPC `create_tenant_after_confirmation` (fase MVP).
+- Guard para impedir acceso a `register/login` cuando ya existe sesión activa.
+- Guard para forzar onboarding antes de entrar al dashboard.
+- Onboarding obligatorio en `/onboarding/profile-club` para completar:
+  - `profiles.full_name`
+  - `clubs.phone`
+  - `clubs.address`
+  - `clubs.photo_url`
+- Foto/logo de club almacenada en Supabase Storage (bucket `club-assets`).
 - `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
 - `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
 

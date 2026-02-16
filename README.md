@@ -9,6 +9,8 @@ Validar y operar el flujo inicial de onboarding:
 - Registro del usuario administrador.
 - Registro del club (tenant).
 - Confirmación por email y creación de tenant post-confirmación.
+- Login autenticado con redirección según estado de onboarding.
+- Onboarding obligatorio para completar datos mínimos del administrador y club.
 
 ## Stack
 
@@ -39,6 +41,8 @@ Decisión clave:
 3. En `/auth/callback`, frontend valida sesión confirmada.
 4. Frontend llama RPC `create_tenant_after_confirmation`.
 5. RPC crea `profile`, `club`, `club_members` con lógica transaccional e idempotente.
+6. Usuario pasa por `/onboarding/profile-club` si faltan datos obligatorios.
+7. Solo con onboarding completo accede a dashboard.
 
 ## Estructura frontend (MVP)
 
@@ -47,7 +51,12 @@ Se usa estructura simple por features:
 ```text
 src/app/
 ├── core/
+│   └── guards/
 ├── features/
+│   ├── onboarding/
+│   │   ├── models/
+│   │   ├── pages/
+│   │   └── services/
 │   └── registration/
 │       ├── models/
 │       ├── services/
@@ -97,8 +106,16 @@ App disponible en:
 ## Estado actual
 
 - Registro admin + club implementado en UI.
+- Login integrado con Supabase (`signInWithPassword`).
 - Validaciones y alertas con PrimeNG.
 - Diseño responsive para mobile y desktop.
 - Integración real con Supabase Auth en register.
 - Callback `/auth/callback` implementado.
 - Inicialización de tenant vía RPC `create_tenant_after_confirmation`.
+- Guard para bloquear `login/register` con sesión activa.
+- Guard para exigir onboarding antes de entrar al dashboard.
+- Onboarding `/onboarding/profile-club` con:
+  - nombre administrador
+  - teléfono club
+  - dirección club
+  - foto/logo en Supabase Storage (`club-assets`)

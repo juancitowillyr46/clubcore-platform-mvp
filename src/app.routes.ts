@@ -5,6 +5,9 @@ import { Documentation } from './app/pages/documentation/documentation';
 import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
 import { authGuard } from './app/core/guards/auth.guard';
+import { onboardingCompleteGuard } from './app/core/guards/onboarding-complete.guard';
+import { onboardingPageGuard } from './app/core/guards/onboarding-page.guard';
+import { ProfileClubOnboardingPage } from './app/features/onboarding/pages/profile-club-onboarding.page';
 
 export const appRoutes: Routes = [
     {
@@ -12,10 +15,11 @@ export const appRoutes: Routes = [
         component: AppLayout,
         canActivate: [authGuard],
         children: [
-            { path: '', component: Dashboard },
-            { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
-            { path: 'documentation', component: Documentation },
-            { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
+            { path: '', component: Dashboard, canActivate: [onboardingCompleteGuard] },
+            { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes'), canActivate: [onboardingCompleteGuard] },
+            { path: 'documentation', component: Documentation, canActivate: [onboardingCompleteGuard] },
+            { path: 'pages', loadChildren: () => import('./app/pages/pages.routes'), canActivate: [onboardingCompleteGuard] },
+            { path: 'onboarding/profile-club', component: ProfileClubOnboardingPage, canActivate: [onboardingPageGuard] }
         ]
     },
     { path: 'landing', component: Landing },

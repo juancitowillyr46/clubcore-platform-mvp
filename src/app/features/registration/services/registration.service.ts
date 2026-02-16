@@ -79,21 +79,36 @@ export class RegistrationService {
         }
 
         const clubName = String(session.user.user_metadata?.['club_name'] ?? '').trim();
-        if (!clubName) {
-            return { success: false, errors: ['No se encontró el nombre del club en metadata de registro.'] };
+
+        // Compatibilidad con usuarios creados manualmente o pruebas previas:
+        // si ya existe membresía, no requiere metadata para continuar.
+        const { data: membership } = await this.supabase.client
+            .from('club_members')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .limit(1)
+            .maybeSingle();
+
+        if (!clubName && !membership?.id) {
+            return {
+                success: false,
+                errors: ['No se encontró el nombre del club en el registro. Crea la cuenta desde /auth/register para continuar.']
+            };
         }
 
         const fullNameRaw = session.user.user_metadata?.['full_name'];
         const fullName = typeof fullNameRaw === 'string' && fullNameRaw.trim() ? fullNameRaw.trim() : null;
 
-        const { error: rpcError } = await this.supabase.client.rpc(environment.createTenantRpc, {
-            p_user_id: session.user.id,
-            p_full_name: fullName,
-            p_club_name: clubName
-        });
+        if (!membership?.id) {
+            const { error: rpcError } = await this.supabase.client.rpc(environment.createTenantRpc, {
+                p_user_id: session.user.id,
+                p_full_name: fullName,
+                p_club_name: clubName
+            });
 
-        if (rpcError) {
-            return { success: false, errors: [rpcError.message] };
+            if (rpcError) {
+                return { success: false, errors: [rpcError.message] };
+            }
         }
 
         return {

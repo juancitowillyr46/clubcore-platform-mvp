@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { RegistrationService } from '@/app/features/registration/services/registration.service';
+import { OnboardingService } from '@/app/features/onboarding/services/onboarding.service';
 
 @Component({
     selector: 'app-auth-callback',
@@ -36,7 +37,7 @@ import { RegistrationService } from '@/app/features/registration/services/regist
                     <div class="mb-5">
                         <p-message severity="success" [text]="successMessage()"></p-message>
                     </div>
-                    <p-button label="Ir al inicio" styleClass="w-full" (onClick)="goToDashboard()"></p-button>
+                    <p-button label="Continuar" styleClass="w-full" (onClick)="goToDashboard()"></p-button>
                 }
             </div>
         </div>
@@ -44,11 +45,13 @@ import { RegistrationService } from '@/app/features/registration/services/regist
 })
 export class AuthCallbackPage implements OnInit {
     private readonly registrationService = inject(RegistrationService);
+    private readonly onboardingService = inject(OnboardingService);
     private readonly router = inject(Router);
 
     readonly state = signal<'loading' | 'success' | 'error'>('loading');
     readonly errors = signal<string[]>([]);
     readonly successMessage = signal('Procesamiento completado.');
+    private targetRoute: '/' | '/onboarding/profile-club' = '/';
 
     async ngOnInit(): Promise<void> {
         const exchangeResult = await this.registrationService.establishSessionFromCallbackUrl();
@@ -68,7 +71,9 @@ export class AuthCallbackPage implements OnInit {
 
         this.state.set('success');
         this.successMessage.set(result.message ?? 'Cuenta y club listos.');
-        setTimeout(() => this.router.navigateByUrl('/'), 1200);
+        const isComplete = await this.onboardingService.isComplete();
+        this.targetRoute = isComplete ? '/' : '/onboarding/profile-club';
+        setTimeout(() => this.router.navigateByUrl(this.targetRoute), 1200);
     }
 
     goToLogin(): void {
@@ -76,6 +81,6 @@ export class AuthCallbackPage implements OnInit {
     }
 
     goToDashboard(): void {
-        void this.router.navigateByUrl('/');
+        void this.router.navigateByUrl(this.targetRoute);
     }
 }

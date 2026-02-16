@@ -9,7 +9,7 @@ import { guestOnlyGuard } from '../../core/guards/guest-only.guard';
 export default [
     { path: 'access', component: Access },
     { path: 'error', component: Error },
-    { path: 'login', component: Login },
+    { path: 'login', component: Login, canActivate: [guestOnlyGuard] },
     { path: 'register', component: RegisterPage, canActivate: [guestOnlyGuard] },
     { path: 'callback', component: AuthCallbackPage }
 ] as Routes;

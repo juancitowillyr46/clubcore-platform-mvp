@@ -55,6 +55,10 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
                                 <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
                             </div>
                             <p-button label="Sign In" styleClass="w-full" routerLink="/"></p-button>
+                            <div class="text-center mt-6 text-muted-color">
+                                Don't have an account?
+                                <a routerLink="/auth/register" class="font-medium text-primary cursor-pointer">Create your club</a>
+                            </div>
                         </div>
                     </div>
                 </div>

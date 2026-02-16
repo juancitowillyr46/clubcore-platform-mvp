@@ -127,7 +127,7 @@ export class RegisterPage {
         }
 
         this.form.reset({ email: '', password: '', clubName: '' });
-        this.successMessage.set(`${result.data.message} Admin: ${result.data.adminId} | Club: ${result.data.clubId}`);
+        this.successMessage.set(result.data.message);
     }
 
     private mapValidationErrors(): string[] {

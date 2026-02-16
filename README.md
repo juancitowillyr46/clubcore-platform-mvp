@@ -4,13 +4,11 @@ MVP frontend basado en `Sakai (PrimeNG)` para construir una plataforma SaaS mult
 
 ## Objetivo del MVP
 
-Validar el flujo inicial de onboarding:
+Validar y operar el flujo inicial de onboarding:
 
 - Registro del usuario administrador.
 - Registro del club (tenant).
-- Preparación para integración con Supabase + Edge Functions.
-
-Actualmente el registro está implementado con **datos mock** para avanzar rápido en frontend.
+- Confirmación por email y creación de tenant post-confirmación.
 
 ## Stack
 
@@ -31,15 +29,16 @@ Modelo multi-tenant recomendado:
 Decisión clave:
 
 - No usar trigger automático en `auth.users`.
-- Ejecutar creación de tenant **post-confirmación de email** mediante Edge Function (`/create-tenant`).
+- Ejecutar creación de tenant **post-confirmación de email**.
+- En esta fase MVP se usa `RPC` en callback (`create_tenant_after_confirmation`).
 
 ## Flujo recomendado de onboarding
 
 1. Frontend ejecuta `supabase.auth.signUp(...)` con metadata (`full_name`, `club_name`).
 2. Usuario confirma email.
 3. En `/auth/callback`, frontend valida sesión confirmada.
-4. Frontend llama Edge Function `/create-tenant` con `access token`.
-5. Edge Function crea `profile`, `club`, `club_members` (y opcionalmente email de bienvenida).
+4. Frontend llama RPC `create_tenant_after_confirmation`.
+5. RPC crea `profile`, `club`, `club_members` con lógica transaccional e idempotente.
 
 ## Estructura frontend (MVP)
 
@@ -69,7 +68,7 @@ src/app/
 git clone --recurse-submodules https://github.com/juancitowillyr46/clubcore-platform-mvp.git
 cd clubcore-platform-mvp
 nvm use 20.19.0
-npm install
+npx npm install
 ```
 
 Si clonaste sin submódulos:
@@ -81,23 +80,25 @@ git submodule update --init --recursive
 ## Desarrollo local
 
 ```bash
-npm start
+npx ng serve --port 3000
 ```
 
 App disponible en:
 
-- `http://localhost:4200`
+- `http://localhost:3000`
 
 ## Scripts útiles
 
-- `npm start`: levanta servidor de desarrollo.
-- `npm run build`: compila build de producción.
-- `npm test`: ejecuta pruebas.
-- `npm run format`: formatea archivos compatibles.
+- `npx ng serve --port 3000`: levanta servidor de desarrollo.
+- `npx ng build`: compila build de producción.
+- `npx ng test`: ejecuta pruebas.
+- `npx npm run format`: formatea archivos compatibles.
 
 ## Estado actual
 
 - Registro admin + club implementado en UI.
 - Validaciones y alertas con PrimeNG.
 - Diseño responsive para mobile y desktop.
-- Persistencia aún mock (sin Supabase real en frontend).
+- Integración real con Supabase Auth en register.
+- Callback `/auth/callback` implementado.
+- Inicialización de tenant vía RPC `create_tenant_after_confirmation`.

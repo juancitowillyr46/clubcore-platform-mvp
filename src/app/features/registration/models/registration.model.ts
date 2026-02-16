@@ -5,13 +5,18 @@ export interface RegisterPayload {
 }
 
 export interface RegisterSuccess {
-    adminId: string;
-    clubId: string;
     message: string;
+    requiresEmailConfirmation: boolean;
 }
 
 export interface RegisterResult {
     success: boolean;
     data?: RegisterSuccess;
+    errors?: string[];
+}
+
+export interface AuthCallbackResult {
+    success: boolean;
+    message?: string;
     errors?: string[];
 }

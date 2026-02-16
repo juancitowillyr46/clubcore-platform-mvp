@@ -161,3 +161,34 @@ Arquitectura escalable
 Seguridad lista para RLS
 
 Onboarding profesional
+
+📌 Implementación actual en este MVP
+
+- `register` integrado con Supabase Auth (`signUp`).
+- `/auth/callback` implementado en frontend.
+- Inicialización de tenant usando RPC `create_tenant_after_confirmation` (fase MVP).
+- `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
+- `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
+
+🧪 Pruebas con Supabase (importante para MVP)
+
+Sí, para pruebas puedes crear y eliminar usuarios sin problema.
+
+Crear usuarios:
+- Dashboard: `Authentication -> Users -> Add user`
+- Frontend: `supabase.auth.signUp(...)`
+- Backend (Service Role): `supabase.auth.admin.createUser(...)` (recomendado para tests automatizados)
+
+Eliminar usuarios:
+- Dashboard: `Authentication -> Users -> Delete`
+- Backend (Service Role): `supabase.auth.admin.deleteUser(userId)`
+
+⚠ Punto clave:
+Eliminar en `auth.users` NO borra automáticamente registros relacionados (`profiles`, `club_members`, etc.) si no lo defines explícitamente.
+
+Recomendación para Club Core:
+- Usar `ON DELETE CASCADE` en relaciones por usuario, por ejemplo:
+  - `profiles.user_id -> auth.users(id) on delete cascade`
+  - `club_members.user_id -> auth.users(id) on delete cascade`
+
+Con eso, al borrar un usuario en auth también limpias relaciones y evitas datos huérfanos.

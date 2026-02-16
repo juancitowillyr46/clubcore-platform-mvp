@@ -1,59 +1,103 @@
-# Sakai19
+# ClubCore Platform MVP
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.
+MVP frontend basado en `Sakai (PrimeNG)` para construir una plataforma SaaS multi-tenant orientada a clubes.
 
-## Development server
+## Objetivo del MVP
 
-To start a local development server, run:
+Validar el flujo inicial de onboarding:
 
-```bash
-ng serve
+- Registro del usuario administrador.
+- Registro del club (tenant).
+- Preparación para integración con Supabase + Edge Functions.
+
+Actualmente el registro está implementado con **datos mock** para avanzar rápido en frontend.
+
+## Stack
+
+- Angular 21
+- PrimeNG 21 (template Sakai)
+- Tailwind CSS 4
+- TypeScript
+
+## Arquitectura funcional (referencia MPV-Club)
+
+Modelo multi-tenant recomendado:
+
+- `profiles`: datos editables del usuario autenticado.
+- `clubs`: tenant del cliente.
+- `club_members`: pertenencia y rol (`CLUB_ADMIN`, `STAFF`), con regla 1 usuario = 1 club.
+- `system_admins`: administración global separada.
+
+Decisión clave:
+
+- No usar trigger automático en `auth.users`.
+- Ejecutar creación de tenant **post-confirmación de email** mediante Edge Function (`/create-tenant`).
+
+## Flujo recomendado de onboarding
+
+1. Frontend ejecuta `supabase.auth.signUp(...)` con metadata (`full_name`, `club_name`).
+2. Usuario confirma email.
+3. En `/auth/callback`, frontend valida sesión confirmada.
+4. Frontend llama Edge Function `/create-tenant` con `access token`.
+5. Edge Function crea `profile`, `club`, `club_members` (y opcionalmente email de bienvenida).
+
+## Estructura frontend (MVP)
+
+Se usa estructura simple por features:
+
+```text
+src/app/
+├── core/
+├── features/
+│   └── registration/
+│       ├── models/
+│       ├── services/
+│       └── pages/
+├── layout/
+└── pages/
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Requisitos
 
-## Code scaffolding
+- Node `20.19.0` (recomendado)
+- npm `10+`
+- Git con submodules habilitados
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Instalación
 
 ```bash
-ng generate --help
+git clone --recurse-submodules https://github.com/juancitowillyr46/clubcore-platform-mvp.git
+cd clubcore-platform-mvp
+nvm use 20.19.0
+npm install
 ```
 
-## Building
-
-To build the project run:
+Si clonaste sin submódulos:
 
 ```bash
-ng build
+git submodule update --init --recursive
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Desarrollo local
 
 ```bash
-ng test
+npm start
 ```
 
-## Running end-to-end tests
+App disponible en:
 
-For end-to-end (e2e) testing, run:
+- `http://localhost:4200`
 
-```bash
-ng e2e
-```
+## Scripts útiles
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+- `npm start`: levanta servidor de desarrollo.
+- `npm run build`: compila build de producción.
+- `npm test`: ejecuta pruebas.
+- `npm run format`: formatea archivos compatibles.
 
-## Additional Resources
+## Estado actual
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Registro admin + club implementado en UI.
+- Validaciones y alertas con PrimeNG.
+- Diseño responsive para mobile y desktop.
+- Persistencia aún mock (sin Supabase real en frontend).

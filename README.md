@@ -61,6 +61,10 @@ src/app/
 │   │   ├── models/
 │   │   ├── services/
 │   │   └── pages/
+│   ├── categories/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
 │   └── venues/
 │       ├── models/
 │       ├── pages/
@@ -128,3 +132,9 @@ App disponible en:
   - crear/editar
   - baja lógica (`is_active`)
   - una sola sede activa por defecto por club
+- Módulo `Categorías` (`/categories`) con datos mock (HU-10):
+  - listado en cards
+  - crear/editar
+  - baja lógica (`is_active`)
+  - validación de rango (`edad mínima <= edad máxima`)
+  - validación de no solapamiento en categorías activas

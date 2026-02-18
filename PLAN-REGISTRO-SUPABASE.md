@@ -89,6 +89,21 @@ Este documento aterriza tareas concretas para la HU:
    - Búsqueda, ordenamiento y paginación.
    - Confirmación de baja individual y masiva.
 
+## 2.7 Categorías (`/categories`)
+
+1. Implementar módulo de categorías con datos mock para acelerar HU-10.
+2. CRUD:
+   - Listar categorías (`name`, `ageMin`, `ageMax`, `isActive`).
+   - Crear categoría validando `ageMin <= ageMax`.
+   - Editar categoría existente.
+   - Dar de baja lógica (`is_active = false`).
+3. Regla recomendada:
+   - Evitar solapamiento de rangos activos.
+4. UX:
+   - Cards responsive (mobile first).
+   - Búsqueda por nombre, ordenamiento y paginación.
+   - Confirmación de baja individual y masiva.
+
 ## 3) Tareas concretas (backend Supabase)
 
 1. Crear tablas: `profiles`, `clubs`, `club_members`, `system_admins`.
@@ -183,12 +198,45 @@ where is_default = true and is_active = true;
 ```
 
 ```sql
+-- 5.2) Tabla categories (categorías por rango de edad)
+create extension if not exists btree_gist;
+
+create table if not exists public.categories (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  name text not null,
+  age_min integer not null check (age_min >= 0),
+  age_max integer not null check (age_max >= age_min),
+  is_active boolean not null default true,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_categories_club_id on public.categories(club_id);
+create index if not exists idx_categories_club_active on public.categories(club_id, is_active);
+
+-- Evita rangos solapados solo entre categorías activas no eliminadas lógicamente.
+alter table public.categories
+drop constraint if exists categories_no_overlap_active;
+
+alter table public.categories
+add constraint categories_no_overlap_active
+exclude using gist (
+  club_id with =,
+  int4range(age_min, age_max, '[]') with &&
+)
+where (is_active = true and deleted_at is null);
+```
+
+```sql
 -- 6) RLS
 alter table public.profiles enable row level security;
 alter table public.clubs enable row level security;
 alter table public.club_members enable row level security;
 alter table public.system_admins enable row level security;
 alter table public.venues enable row level security;
+alter table public.categories enable row level security;
 ```
 
 ```sql
@@ -307,6 +355,56 @@ with check (
       and cm.user_id = auth.uid()
   )
 );
+
+drop policy if exists "categories_select_member" on public.categories;
+create policy "categories_select_member"
+on public.categories
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = categories.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "categories_insert_member" on public.categories;
+create policy "categories_insert_member"
+on public.categories
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = categories.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "categories_update_member" on public.categories;
+create policy "categories_update_member"
+on public.categories
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = categories.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = categories.club_id
+      and cm.user_id = auth.uid()
+  )
+);
 ```
 
 ```sql
@@ -421,5 +519,7 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 - [x] Storage integrado para foto/logo del club.
 - [x] Módulo de sedes integrado con Supabase (sin datos mock).
 - [x] SQL + RLS de `venues` aplicado.
+- [x] HU-10 Categorías implementada en frontend con datos mock.
+- [x] SQL + RLS de `categories` documentado para ejecución en Supabase.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

@@ -49,7 +49,10 @@ export class AppMenu {
             },
             {
                 label: 'Gestión',
-                items: [{ label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] }]
+                items: [
+                    { label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] },
+                    { label: 'Categorías', icon: 'pi pi-fw pi-tags', routerLink: ['/categories'] }
+                ]
             },
             {
                 label: 'Pages',

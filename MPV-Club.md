@@ -180,6 +180,11 @@ Onboarding profesional
   - CRUD (create/read/update + baja lógica)
   - búsqueda, ordenamiento y paginación
   - regla de una sola sede activa por defecto por club
+- Módulo de categorías (`/categories`) implementado en HU-10 con datos mock:
+  - CRUD (create/read/update + baja lógica)
+  - rango de edad mínimo/máximo por categoría
+  - validación para evitar solapamiento entre categorías activas
+  - UI responsive basada en cards
 - `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
 - `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
 

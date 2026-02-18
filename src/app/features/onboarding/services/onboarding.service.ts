@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from '@/app/core/services/supabase.service';
-import { CompleteOnboardingPayload, OnboardingContext } from '../models/onboarding.model';
+import { CompleteOnboardingPayload, CreateInitialVenuePayload, OnboardingContext } from '../models/onboarding.model';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
@@ -46,6 +46,8 @@ export class OnboardingService {
         const mission = String(club?.mission ?? '').trim();
         const vision = String(club?.vision ?? '').trim();
         const photoUrl = String(club?.photo_url ?? '').trim();
+        const hasVenue = await this.hasActiveVenue(clubId);
+        const isClubProfileComplete = Boolean(fullName && phone && address && description && photoUrl);
 
         return {
             userId,
@@ -58,7 +60,9 @@ export class OnboardingService {
             mission,
             vision,
             photoUrl,
-            isComplete: Boolean(fullName && phone && address && description && photoUrl)
+            hasVenue,
+            isClubProfileComplete,
+            isComplete: Boolean(isClubProfileComplete && hasVenue)
         };
     }
 
@@ -124,5 +128,40 @@ export class OnboardingService {
         if (clubError) {
             throw new Error(clubError.message);
         }
+    }
+
+    async createInitialVenue(payload: CreateInitialVenuePayload): Promise<void> {
+        const context = await this.getContext();
+        const hasVenue = await this.hasActiveVenue(context.clubId);
+        if (hasVenue) {
+            return;
+        }
+
+        const { error } = await this.supabase.client.from('venues').insert({
+            club_id: context.clubId,
+            name: payload.name.trim(),
+            address: payload.address.trim(),
+            is_default: true,
+            is_active: true
+        });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+    }
+
+    private async hasActiveVenue(clubId: string): Promise<boolean> {
+        const { data, error } = await this.supabase.client
+            .from('venues')
+            .select('id')
+            .eq('club_id', clubId)
+            .eq('is_active', true)
+            .limit(1);
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        return Array.isArray(data) && data.length > 0;
     }
 }

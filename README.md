@@ -57,10 +57,14 @@ src/app/
 │   │   ├── models/
 │   │   ├── pages/
 │   │   └── services/
-│   └── registration/
+│   ├── registration/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
+│   └── venues/
 │       ├── models/
-│       ├── services/
-│       └── pages/
+│       ├── pages/
+│       └── services/
 ├── layout/
 └── pages/
 ```
@@ -119,3 +123,8 @@ App disponible en:
   - teléfono club
   - dirección club
   - foto/logo en Supabase Storage (`club-assets`)
+- Módulo `Sedes` (`/venues`) conectado a Supabase:
+  - listado en cards
+  - crear/editar
+  - baja lógica (`is_active`)
+  - una sola sede activa por defecto por club

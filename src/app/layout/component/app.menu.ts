@@ -48,6 +48,10 @@ export class AppMenu {
                 ]
             },
             {
+                label: 'Gestión',
+                items: [{ label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] }]
+            },
+            {
                 label: 'Pages',
                 icon: 'pi pi-fw pi-briefcase',
                 path: '/pages',

@@ -8,6 +8,7 @@ import { authGuard } from './app/core/guards/auth.guard';
 import { onboardingCompleteGuard } from './app/core/guards/onboarding-complete.guard';
 import { onboardingPageGuard } from './app/core/guards/onboarding-page.guard';
 import { ProfileClubOnboardingPage } from './app/features/onboarding/pages/profile-club-onboarding.page';
+import { VenuesPage } from './app/features/venues/pages/venues.page';
 
 export const appRoutes: Routes = [
     {
@@ -19,6 +20,7 @@ export const appRoutes: Routes = [
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes'), canActivate: [onboardingCompleteGuard] },
             { path: 'documentation', component: Documentation, canActivate: [onboardingCompleteGuard] },
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes'), canActivate: [onboardingCompleteGuard] },
+            { path: 'venues', component: VenuesPage, canActivate: [onboardingCompleteGuard] },
             { path: 'onboarding/profile-club', component: ProfileClubOnboardingPage, canActivate: [onboardingPageGuard] }
         ]
     },

@@ -176,6 +176,10 @@ Onboarding profesional
   - `clubs.address`
   - `clubs.photo_url`
 - Foto/logo de club almacenada en Supabase Storage (bucket `club-assets`).
+- Módulo de sedes (`/venues`) integrado con Supabase:
+  - CRUD (create/read/update + baja lógica)
+  - búsqueda, ordenamiento y paginación
+  - regla de una sola sede activa por defecto por club
 - `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
 - `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
 

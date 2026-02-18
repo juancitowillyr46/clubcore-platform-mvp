@@ -9,6 +9,8 @@ export interface OnboardingContext {
     mission: string;
     vision: string;
     photoUrl: string;
+    hasVenue: boolean;
+    isClubProfileComplete: boolean;
     isComplete: boolean;
 }
 
@@ -21,4 +23,9 @@ export interface CompleteOnboardingPayload {
     mission: string;
     vision: string;
     photoUrl: string;
+}
+
+export interface CreateInitialVenuePayload {
+    name: string;
+    address: string;
 }

@@ -21,7 +21,7 @@ Este documento aterriza tareas concretas para la HU:
 
 ## 2.1 Register (`/auth/register`)
 
-1. Reemplazar mock por `SupabaseService`.
+1. Integrar `SupabaseService` para registro real.
 2. En submit:
    - Validar email/password/clubName.
    - Ejecutar `supabase.auth.signUp(...)`.
@@ -73,6 +73,21 @@ Este documento aterriza tareas concretas para la HU:
 3. Persistir:
    - `profiles.full_name`
    - `clubs.phone`, `clubs.address`, `clubs.photo_url`
+
+## 2.6 Sedes (`/venues`)
+
+1. Integrar módulo de sedes con Supabase (sin mocks).
+2. CRUD:
+   - Listar sedes del club autenticado.
+   - Crear sede.
+   - Editar sede.
+   - Dar de baja lógica (`is_active = false`).
+3. Regla de negocio:
+   - Solo una sede activa por defecto por club.
+4. UX:
+   - Cards responsive (mobile first).
+   - Búsqueda, ordenamiento y paginación.
+   - Confirmación de baja individual y masiva.
 
 ## 3) Tareas concretas (backend Supabase)
 
@@ -149,11 +164,31 @@ create index if not exists idx_clubs_created_by on public.clubs(created_by);
 ```
 
 ```sql
+-- 5.1) Tabla venues (sucursales/sedes)
+create table if not exists public.venues (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  name text not null,
+  address text not null,
+  is_default boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_venues_club_id on public.venues(club_id);
+create unique index if not exists ux_venues_default_per_club
+on public.venues(club_id)
+where is_default = true and is_active = true;
+```
+
+```sql
 -- 6) RLS
 alter table public.profiles enable row level security;
 alter table public.clubs enable row level security;
 alter table public.club_members enable row level security;
 alter table public.system_admins enable row level security;
+alter table public.venues enable row level security;
 ```
 
 ```sql
@@ -222,6 +257,56 @@ on public.club_members
 for select
 to authenticated
 using (user_id = auth.uid());
+
+drop policy if exists "venues_select_member" on public.venues;
+create policy "venues_select_member"
+on public.venues
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = venues.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "venues_insert_member" on public.venues;
+create policy "venues_insert_member"
+on public.venues
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = venues.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "venues_update_member" on public.venues;
+create policy "venues_update_member"
+on public.venues
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = venues.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = venues.club_id
+      and cm.user_id = auth.uid()
+  )
+);
 ```
 
 ```sql
@@ -334,5 +419,7 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 - [x] Cascade delete aplicado en relaciones por usuario.
 - [x] Ajuste `clubs.created_by` a `on delete set null`.
 - [x] Storage integrado para foto/logo del club.
+- [x] Módulo de sedes integrado con Supabase (sin datos mock).
+- [x] SQL + RLS de `venues` aplicado.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

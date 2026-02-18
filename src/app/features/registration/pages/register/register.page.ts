@@ -26,11 +26,11 @@ import { RegistrationService } from '../../services/registration.service';
                         </div>
                         <div class="flex items-start gap-3">
                             <i class="pi pi-check-circle mt-1"></i>
-                            <span>Datos mock para desarrollar frontend sin backend real.</span>
+                            <span>Flujo conectado con Supabase Auth para registro real.</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <i class="pi pi-check-circle mt-1"></i>
-                            <span>Listo para reemplazar por Supabase + Edge Function.</span>
+                            <span>Listo para evolucionar a Edge Functions cuando lo necesites.</span>
                         </div>
                     </div>
                 </section>

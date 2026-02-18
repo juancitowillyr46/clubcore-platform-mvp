@@ -28,7 +28,7 @@ export class OnboardingService {
 
         const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
             this.supabase.client.from('profiles').select('full_name').eq('id', userId).maybeSingle(),
-            this.supabase.client.from('clubs').select('phone,address,photo_url').eq('id', clubId).single()
+            this.supabase.client.from('clubs').select('phone,address,description,slogan,mission,vision,photo_url').eq('id', clubId).single()
         ]);
 
         if (profileError) {
@@ -41,6 +41,10 @@ export class OnboardingService {
         const fullName = String(profile?.full_name ?? '').trim();
         const phone = String(club?.phone ?? '').trim();
         const address = String(club?.address ?? '').trim();
+        const description = String(club?.description ?? '').trim();
+        const slogan = String(club?.slogan ?? '').trim();
+        const mission = String(club?.mission ?? '').trim();
+        const vision = String(club?.vision ?? '').trim();
         const photoUrl = String(club?.photo_url ?? '').trim();
 
         return {
@@ -49,8 +53,12 @@ export class OnboardingService {
             fullName,
             phone,
             address,
+            description,
+            slogan,
+            mission,
+            vision,
             photoUrl,
-            isComplete: Boolean(fullName && phone && address && photoUrl)
+            isComplete: Boolean(fullName && phone && address && description && photoUrl)
         };
     }
 
@@ -105,6 +113,10 @@ export class OnboardingService {
             .update({
                 phone: payload.phone.trim(),
                 address: payload.address.trim(),
+                description: payload.description.trim(),
+                slogan: payload.slogan.trim(),
+                mission: payload.mission.trim(),
+                vision: payload.vision.trim(),
                 photo_url: payload.photoUrl.trim()
             })
             .eq('id', context.clubId);

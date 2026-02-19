@@ -43,6 +43,11 @@ interface SelectItem {
             @if (pageError()) {
                 <p-message severity="error" [text]="pageError()"></p-message>
             }
+            @if (hasMissingDependencies()) {
+                <div class="mt-3">
+                    <p-message severity="warn" [text]="missingDependenciesMessage()"></p-message>
+                </div>
+            }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4">
                 <input pInputText [value]="searchTerm()" (input)="onSearch($event)" class="w-full lg:col-span-2" placeholder="Buscar equipo..." />
@@ -285,6 +290,21 @@ export class TeamsPage implements OnInit {
 
     canCreateTeam(): boolean {
         return this.venues().length > 0 && this.categories().length > 0 && this.trainers().length > 0;
+    }
+
+    hasMissingDependencies(): boolean {
+        if (this.loading()) {
+            return false;
+        }
+        return this.venues().length === 0 || this.categories().length === 0 || this.trainers().length === 0;
+    }
+
+    missingDependenciesMessage(): string {
+        const missing: string[] = [];
+        if (this.venues().length === 0) missing.push('sede');
+        if (this.categories().length === 0) missing.push('categoría');
+        if (this.trainers().length === 0) missing.push('entrenador');
+        return `Para crear un equipo debe existir al menos una ${missing.join(', una ')} activa.`;
     }
 
     fallbackSingle(options: SelectItem[], empty: string): string {

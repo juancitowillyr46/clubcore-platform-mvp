@@ -69,6 +69,10 @@ src/app/
 │   │   ├── models/
 │   │   ├── services/
 │   │   └── pages/
+│   ├── teams/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
 │   └── venues/
 │       ├── models/
 │       ├── pages/
@@ -136,7 +140,7 @@ App disponible en:
   - crear/editar
   - baja lógica (`is_active`)
   - una sola sede activa por defecto por club
-- Módulo `Categorías` (`/categories`) con datos mock (HU-10):
+- Módulo `Categorías` (`/categories`) conectado a Supabase:
   - listado en cards
   - crear/editar
   - baja lógica (`is_active`)
@@ -148,3 +152,9 @@ App disponible en:
   - baja lógica (`is_active`)
   - foto en `photo_url` (actualmente Data URL/base64)
   - búsqueda, ordenamiento y paginación
+- Módulo `Equipos` (`/teams`) conectado a Supabase:
+  - listado en cards
+  - crear/editar
+  - baja lógica (`is_active` + `deleted_at`)
+  - cuerpo técnico en tabla relacional `team_staff_members`
+  - validación: técnico principal no puede estar en cuerpo técnico

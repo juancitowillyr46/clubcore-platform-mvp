@@ -52,7 +52,8 @@ export class AppMenu {
                 items: [
                     { label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] },
                     { label: 'Categorías', icon: 'pi pi-fw pi-tags', routerLink: ['/categories'] },
-                    { label: 'Entrenadores', icon: 'pi pi-fw pi-users', routerLink: ['/trainers'] }
+                    { label: 'Entrenadores', icon: 'pi pi-fw pi-users', routerLink: ['/trainers'] },
+                    { label: 'Equipos', icon: 'pi pi-fw pi-sitemap', routerLink: ['/teams'] }
                 ]
             },
             {

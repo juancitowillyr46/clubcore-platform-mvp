@@ -190,6 +190,11 @@ Onboarding profesional
   - búsqueda, ordenamiento y paginación
   - UI responsive basada en cards
   - foto almacenada en `photo_url` (MVP actual Data URL/base64)
+- Módulo de equipos (`/teams`) integrado con Supabase:
+  - CRUD (create/read/update + baja lógica)
+  - relación principal con sede, categoría y entrenador principal
+  - cuerpo técnico en tabla relacional `team_staff_members`
+  - validación de negocio: técnico principal no puede repetirse en cuerpo técnico
 - `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
 - `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
 

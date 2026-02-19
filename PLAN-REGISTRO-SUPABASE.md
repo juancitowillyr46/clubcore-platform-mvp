@@ -121,6 +121,23 @@ Este documento aterriza tareas concretas para la HU:
    - Búsqueda por nombre, ordenamiento y paginación.
    - Confirmación de baja individual y masiva.
 
+## 2.9 Equipos (`/teams`)
+
+1. Integrar módulo de equipos con Supabase (sin mocks).
+2. CRUD:
+   - Listar equipos del club autenticado.
+   - Crear equipo con sede, categoría y entrenador principal.
+   - Editar equipo existente.
+   - Dar de baja lógica (`is_active = false`, `deleted_at`).
+3. Relacional:
+   - Tabla `teams` como entidad principal.
+   - Tabla `team_staff_members` para cuerpo técnico adicional con rol.
+4. Reglas:
+   - Si existe una sola sede/categoría/entrenador activo, autoseleccionar.
+   - Si hay más de una opción, usar `p-select`.
+   - Técnico principal no puede estar en cuerpo técnico.
+   - No repetir técnico en cuerpo técnico del mismo equipo.
+
 ## 3) Tareas concretas (backend Supabase)
 
 1. Crear tablas: `profiles`, `clubs`, `club_members`, `system_admins`.
@@ -269,6 +286,76 @@ create index if not exists idx_trainers_name on public.trainers(first_name, last
 ```
 
 ```sql
+-- 5.4) Tablas teams y team_staff_members
+create table if not exists public.teams (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  name text not null,
+  venue_id uuid not null references public.venues(id),
+  category_id uuid not null references public.categories(id),
+  head_trainer_id uuid not null references public.trainers(id),
+  logo_url text,
+  is_active boolean not null default true,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.team_staff_members (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.teams(id) on delete cascade,
+  trainer_id uuid not null references public.trainers(id),
+  role text not null,
+  is_active boolean not null default true,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_teams_club_id on public.teams(club_id);
+create index if not exists idx_teams_club_active on public.teams(club_id, is_active);
+create index if not exists idx_team_staff_team_id on public.team_staff_members(team_id);
+create index if not exists idx_team_staff_trainer_id on public.team_staff_members(trainer_id);
+
+create unique index if not exists ux_team_staff_unique_active
+on public.team_staff_members(team_id, trainer_id)
+where deleted_at is null;
+```
+
+```sql
+-- 5.5) Trigger: técnico principal no puede estar en cuerpo técnico
+create or replace function public.validate_team_staff_member()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_head_trainer_id uuid;
+begin
+  select t.head_trainer_id
+    into v_head_trainer_id
+  from public.teams t
+  where t.id = new.team_id;
+
+  if v_head_trainer_id is null then
+    raise exception 'Team not found for team_staff_members.';
+  end if;
+
+  if new.trainer_id = v_head_trainer_id then
+    raise exception 'Head trainer cannot be part of team staff members.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_validate_team_staff_member on public.team_staff_members;
+create trigger trg_validate_team_staff_member
+before insert or update on public.team_staff_members
+for each row
+execute function public.validate_team_staff_member();
+```
+
+```sql
 -- 6) RLS
 alter table public.profiles enable row level security;
 alter table public.clubs enable row level security;
@@ -277,6 +364,8 @@ alter table public.system_admins enable row level security;
 alter table public.venues enable row level security;
 alter table public.categories enable row level security;
 alter table public.trainers enable row level security;
+alter table public.teams enable row level security;
+alter table public.team_staff_members enable row level security;
 ```
 
 ```sql
@@ -495,6 +584,110 @@ with check (
       and cm.user_id = auth.uid()
   )
 );
+
+drop policy if exists "teams_select_member" on public.teams;
+create policy "teams_select_member"
+on public.teams
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "teams_insert_member" on public.teams;
+create policy "teams_insert_member"
+on public.teams
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "teams_update_member" on public.teams;
+create policy "teams_update_member"
+on public.teams
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "team_staff_select_member" on public.team_staff_members;
+create policy "team_staff_select_member"
+on public.team_staff_members
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.teams t
+    join public.club_members cm on cm.club_id = t.club_id
+    where t.id = team_staff_members.team_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "team_staff_insert_member" on public.team_staff_members;
+create policy "team_staff_insert_member"
+on public.team_staff_members
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.teams t
+    join public.club_members cm on cm.club_id = t.club_id
+    where t.id = team_staff_members.team_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "team_staff_update_member" on public.team_staff_members;
+create policy "team_staff_update_member"
+on public.team_staff_members
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.teams t
+    join public.club_members cm on cm.club_id = t.club_id
+    where t.id = team_staff_members.team_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.teams t
+    join public.club_members cm on cm.club_id = t.club_id
+    where t.id = team_staff_members.team_id
+      and cm.user_id = auth.uid()
+  )
+);
 ```
 
 ```sql
@@ -614,5 +807,8 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 - [x] HU-11 Entrenadores implementada en frontend.
 - [x] Módulo `trainers` integrado con Supabase (sin mocks).
 - [x] SQL + RLS de `trainers` documentado para ejecución en Supabase.
+- [x] Módulo `teams` integrado con Supabase (sin mocks).
+- [x] Esquema relacional `teams` + `team_staff_members` definido.
+- [x] SQL + RLS de `teams` documentado para ejecución en Supabase.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

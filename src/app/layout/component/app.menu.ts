@@ -53,6 +53,7 @@ export class AppMenu {
                     { label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] },
                     { label: 'Categorías', icon: 'pi pi-fw pi-tags', routerLink: ['/categories'] },
                     { label: 'Entrenadores', icon: 'pi pi-fw pi-users', routerLink: ['/trainers'] },
+                    { label: 'Jugadores', icon: 'pi pi-fw pi-user-plus', routerLink: ['/players'] },
                     { label: 'Equipos', icon: 'pi pi-fw pi-sitemap', routerLink: ['/teams'] }
                 ]
             },

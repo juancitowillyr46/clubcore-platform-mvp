@@ -185,6 +185,11 @@ Onboarding profesional
   - rango de edad mínimo/máximo por categoría
   - validación para evitar solapamiento entre categorías activas
   - UI responsive basada en cards
+- Módulo de entrenadores (`/trainers`) integrado con Supabase:
+  - CRUD (create/read/update + baja lógica)
+  - búsqueda, ordenamiento y paginación
+  - UI responsive basada en cards
+  - foto almacenada en `photo_url` (MVP actual Data URL/base64)
 - `ON DELETE CASCADE` aplicado en `profiles` y `club_members`.
 - `clubs.created_by` ajustado a `ON DELETE SET NULL` para permitir borrar usuarios sin bloquear integridad.
 

@@ -65,6 +65,10 @@ src/app/
 │   │   ├── models/
 │   │   ├── services/
 │   │   └── pages/
+│   ├── trainers/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
 │   └── venues/
 │       ├── models/
 │       ├── pages/
@@ -138,3 +142,9 @@ App disponible en:
   - baja lógica (`is_active`)
   - validación de rango (`edad mínima <= edad máxima`)
   - validación de no solapamiento en categorías activas
+- Módulo `Entrenadores` (`/trainers`) conectado a Supabase:
+  - listado en cards
+  - crear/editar
+  - baja lógica (`is_active`)
+  - foto en `photo_url` (actualmente Data URL/base64)
+  - búsqueda, ordenamiento y paginación

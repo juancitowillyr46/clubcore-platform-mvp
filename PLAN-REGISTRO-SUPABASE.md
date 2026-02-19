@@ -104,6 +104,23 @@ Este documento aterriza tareas concretas para la HU:
    - Búsqueda por nombre, ordenamiento y paginación.
    - Confirmación de baja individual y masiva.
 
+## 2.8 Entrenadores (`/trainers`)
+
+1. Integrar módulo de entrenadores con Supabase (sin mocks).
+2. CRUD:
+   - Listar entrenadores del club autenticado.
+   - Crear entrenador.
+   - Editar entrenador existente.
+   - Dar de baja lógica (`is_active = false`).
+3. Campos:
+   - `first_name` (requerido).
+   - `last_name`, `middle_name`, `email`, `phone`, `about`.
+   - `photo_url` (MVP actual en Data URL/base64).
+4. UX:
+   - Cards responsive (mobile first).
+   - Búsqueda por nombre, ordenamiento y paginación.
+   - Confirmación de baja individual y masiva.
+
 ## 3) Tareas concretas (backend Supabase)
 
 1. Crear tablas: `profiles`, `clubs`, `club_members`, `system_admins`.
@@ -230,6 +247,28 @@ where (is_active = true and deleted_at is null);
 ```
 
 ```sql
+-- 5.3) Tabla trainers
+create table if not exists public.trainers (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  first_name text not null,
+  last_name text not null default '',
+  middle_name text not null default '',
+  email text,
+  phone text,
+  photo_url text,
+  about text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_trainers_club_id on public.trainers(club_id);
+create index if not exists idx_trainers_club_active on public.trainers(club_id, is_active);
+create index if not exists idx_trainers_name on public.trainers(first_name, last_name, middle_name);
+```
+
+```sql
 -- 6) RLS
 alter table public.profiles enable row level security;
 alter table public.clubs enable row level security;
@@ -237,6 +276,7 @@ alter table public.club_members enable row level security;
 alter table public.system_admins enable row level security;
 alter table public.venues enable row level security;
 alter table public.categories enable row level security;
+alter table public.trainers enable row level security;
 ```
 
 ```sql
@@ -405,6 +445,56 @@ with check (
       and cm.user_id = auth.uid()
   )
 );
+
+drop policy if exists "trainers_select_member" on public.trainers;
+create policy "trainers_select_member"
+on public.trainers
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = trainers.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "trainers_insert_member" on public.trainers;
+create policy "trainers_insert_member"
+on public.trainers
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = trainers.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "trainers_update_member" on public.trainers;
+create policy "trainers_update_member"
+on public.trainers
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = trainers.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = trainers.club_id
+      and cm.user_id = auth.uid()
+  )
+);
 ```
 
 ```sql
@@ -521,5 +611,8 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 - [x] SQL + RLS de `venues` aplicado.
 - [x] HU-10 Categorías implementada en frontend con datos mock.
 - [x] SQL + RLS de `categories` documentado para ejecución en Supabase.
+- [x] HU-11 Entrenadores implementada en frontend.
+- [x] Módulo `trainers` integrado con Supabase (sin mocks).
+- [x] SQL + RLS de `trainers` documentado para ejecución en Supabase.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

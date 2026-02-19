@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -11,7 +11,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { Category } from '../models/category.model';
-import { CategoriesMockService } from '../services/categories-mock.service';
+import { CategoriesService } from '../services/categories.service';
 
 type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
 
@@ -51,7 +51,7 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <input pInputText [value]="searchTerm()" (input)="onSearchChange($event)" class="w-full lg:col-span-2" placeholder="Buscar por nombre..." />
                     <p-select [options]="sortOptions" optionLabel="label" optionValue="value" [ngModel]="sortBy()" (onChange)="onSortChange($event.value)" placeholder="Ordenar por" class="w-full" />
-                    <p-button label="Nueva categoría" icon="pi pi-plus" (onClick)="openCreateDialog()"></p-button>
+                    <p-button label="Nueva categoría" icon="pi pi-plus" [disabled]="loading()" (onClick)="openCreateDialog()"></p-button>
                 </div>
                 <p class="text-sm text-muted-color m-0">{{ filteredCategories().length }} categorías</p>
             </div>
@@ -62,13 +62,17 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
                     icon="pi pi-trash"
                     severity="danger"
                     [outlined]="true"
-                    [disabled]="selectedIds().length === 0"
+                    [disabled]="selectedIds().length === 0 || loading()"
                     (onClick)="askBulkDeactivate()"
                 ></p-button>
                 <span class="text-sm text-muted-color self-center">Seleccionadas: {{ selectedIds().length }}</span>
             </div>
 
-            @if (pagedCategories().length === 0) {
+            @if (loading()) {
+                <div class="p-5 rounded-xl border border-dashed border-surface-300 dark:border-surface-700 text-center text-muted-color">
+                    Cargando categorías...
+                </div>
+            } @else if (pagedCategories().length === 0) {
                 <div class="p-5 rounded-xl border border-dashed border-surface-300 dark:border-surface-700 text-center text-muted-color">
                     No hay categorías para mostrar con el filtro actual.
                 </div>
@@ -102,13 +106,19 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
                             </p>
 
                             <div class="flex gap-2">
-                                <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" [disabled]="!category.isActive" (onClick)="openEditDialog(category)"></p-button>
+                                <p-button
+                                    label="Editar"
+                                    icon="pi pi-pencil"
+                                    [outlined]="true"
+                                    [disabled]="!category.isActive || loading()"
+                                    (onClick)="openEditDialog(category)"
+                                ></p-button>
                                 <p-button
                                     label="Dar de baja"
                                     icon="pi pi-trash"
                                     severity="danger"
                                     [outlined]="true"
-                                    [disabled]="!category.isActive"
+                                    [disabled]="!category.isActive || loading()"
                                     (onClick)="askSingleDeactivate(category)"
                                 ></p-button>
                             </div>
@@ -149,8 +159,8 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
                 }
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <p-button label="Cancelar" [text]="true" (onClick)="closeFormDialog()"></p-button>
-                    <p-button label="Guardar" type="submit"></p-button>
+                    <p-button label="Cancelar" [text]="true" [disabled]="saving()" (onClick)="closeFormDialog()"></p-button>
+                    <p-button label="Guardar" type="submit" [loading]="saving()"></p-button>
                 </div>
             </form>
         </p-dialog>
@@ -163,22 +173,25 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
                 {{ confirmImpactMessage() }}
             </p>
             <div class="flex justify-end gap-2">
-                <p-button label="Cancelar" [text]="true" (onClick)="cancelConfirm()"></p-button>
-                <p-button label="Sí, dar de baja" severity="danger" (onClick)="confirmDeactivate()"></p-button>
+                <p-button label="Cancelar" [text]="true" [disabled]="deactivating()" (onClick)="cancelConfirm()"></p-button>
+                <p-button label="Sí, dar de baja" severity="danger" [loading]="deactivating()" (onClick)="confirmDeactivate()"></p-button>
             </div>
         </p-dialog>
     `
 })
-export class CategoriesPage {
-    private readonly categoriesService = inject(CategoriesMockService);
+export class CategoriesPage implements OnInit {
+    private readonly categoriesService = inject(CategoriesService);
     private readonly fb = inject(FormBuilder);
 
-    readonly allCategories = signal<Category[]>(this.categoriesService.list());
+    readonly allCategories = signal<Category[]>([]);
     readonly searchTerm = signal('');
     readonly sortBy = signal<SortOption>('created_desc');
     readonly first = signal(0);
     readonly rows = signal(6);
     readonly selectedIds = signal<string[]>([]);
+    readonly loading = signal(false);
+    readonly saving = signal(false);
+    readonly deactivating = signal(false);
     readonly pageErrors = signal<string[]>([]);
     readonly sortOptions = [
         { label: 'Más recientes', value: 'created_desc' as SortOption },
@@ -213,6 +226,10 @@ export class CategoriesPage {
         const end = start + this.rows();
         return this.filteredCategories().slice(start, end);
     });
+
+    async ngOnInit(): Promise<void> {
+        await this.loadCategories();
+    }
 
     onSearchChange(event: Event): void {
         const value = (event.target as HTMLInputElement).value ?? '';
@@ -254,7 +271,7 @@ export class CategoriesPage {
         this.showFormDialog = false;
     }
 
-    saveCategory(): void {
+    async saveCategory(): Promise<void> {
         this.formErrors.set([]);
         this.pageErrors.set([]);
         if (this.categoryForm.invalid || this.categoryForm.controls.ageMin.value > this.categoryForm.controls.ageMax.value) {
@@ -265,17 +282,19 @@ export class CategoriesPage {
 
         const payload = this.categoryForm.getRawValue();
         const editingId = this.editingCategoryId();
+        this.saving.set(true);
         try {
             if (editingId) {
-                this.categoriesService.update(editingId, payload);
+                await this.categoriesService.update(editingId, payload);
             } else {
-                this.categoriesService.create(payload);
+                await this.categoriesService.create(payload);
             }
-
-            this.allCategories.set(this.categoriesService.list());
+            await this.loadCategories();
             this.showFormDialog = false;
         } catch (error) {
             this.pageErrors.set([this.normalizeError(error)]);
+        } finally {
+            this.saving.set(false);
         }
     }
 
@@ -298,18 +317,26 @@ export class CategoriesPage {
         this.idsToDeactivate = [];
     }
 
-    confirmDeactivate(): void {
+    async confirmDeactivate(): Promise<void> {
         if (this.idsToDeactivate.length === 0) {
             this.showConfirmDialog = false;
             return;
         }
 
-        this.categoriesService.softDelete(this.idsToDeactivate);
-        this.allCategories.set(this.categoriesService.list());
-        const selectedSet = new Set(this.idsToDeactivate);
-        this.selectedIds.set(this.selectedIds().filter((id) => !selectedSet.has(id)));
-        this.showConfirmDialog = false;
-        this.idsToDeactivate = [];
+        this.deactivating.set(true);
+        this.pageErrors.set([]);
+        try {
+            await this.categoriesService.softDelete(this.idsToDeactivate);
+            await this.loadCategories();
+            const selectedSet = new Set(this.idsToDeactivate);
+            this.selectedIds.set(this.selectedIds().filter((id) => !selectedSet.has(id)));
+            this.showConfirmDialog = false;
+            this.idsToDeactivate = [];
+        } catch (error) {
+            this.pageErrors.set([this.normalizeError(error)]);
+        } finally {
+            this.deactivating.set(false);
+        }
     }
 
     isSelected(id: string): boolean {
@@ -359,6 +386,20 @@ export class CategoriesPage {
             errors.push('La edad mínima no puede ser mayor que la edad máxima.');
         }
         return errors;
+    }
+
+    private async loadCategories(): Promise<void> {
+        this.loading.set(true);
+        this.pageErrors.set([]);
+        try {
+            const categories = await this.categoriesService.list();
+            this.allCategories.set(categories);
+        } catch (error) {
+            this.allCategories.set([]);
+            this.pageErrors.set([this.normalizeError(error)]);
+        } finally {
+            this.loading.set(false);
+        }
     }
 
     private normalizeError(error: unknown): string {

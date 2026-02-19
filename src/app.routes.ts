@@ -9,6 +9,7 @@ import { onboardingCompleteGuard } from './app/core/guards/onboarding-complete.g
 import { onboardingPageGuard } from './app/core/guards/onboarding-page.guard';
 import { ProfileClubOnboardingPage } from './app/features/onboarding/pages/profile-club-onboarding.page';
 import { CategoriesPage } from './app/features/categories/pages/categories.page';
+import { TrainersPage } from './app/features/trainers/pages/trainers.page';
 import { VenuesPage } from './app/features/venues/pages/venues.page';
 
 export const appRoutes: Routes = [
@@ -23,6 +24,7 @@ export const appRoutes: Routes = [
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes'), canActivate: [onboardingCompleteGuard] },
             { path: 'venues', component: VenuesPage, canActivate: [onboardingCompleteGuard] },
             { path: 'categories', component: CategoriesPage, canActivate: [onboardingCompleteGuard] },
+            { path: 'trainers', component: TrainersPage, canActivate: [onboardingCompleteGuard] },
             { path: 'onboarding/profile-club', component: ProfileClubOnboardingPage, canActivate: [onboardingPageGuard] }
         ]
     },

@@ -51,6 +51,7 @@ export class AppMenu {
                 label: 'Gestión',
                 items: [
                     { label: 'Sedes', icon: 'pi pi-fw pi-map-marker', routerLink: ['/venues'] },
+                    { label: 'Ubicaciones', icon: 'pi pi-fw pi-map', routerLink: ['/field-locations'] },
                     { label: 'Categorías', icon: 'pi pi-fw pi-tags', routerLink: ['/categories'] },
                     { label: 'Entrenadores', icon: 'pi pi-fw pi-users', routerLink: ['/trainers'] },
                     { label: 'Jugadores', icon: 'pi pi-fw pi-user-plus', routerLink: ['/players'] },

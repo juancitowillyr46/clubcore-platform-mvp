@@ -73,6 +73,10 @@ src/app/
 │   │   ├── models/
 │   │   ├── services/
 │   │   └── pages/
+│   ├── training-sessions/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
 │   └── venues/
 │       ├── models/
 │       ├── pages/
@@ -158,3 +162,19 @@ App disponible en:
   - baja lógica (`is_active` + `deleted_at`)
   - cuerpo técnico en tabla relacional `team_staff_members`
   - validación: técnico principal no puede estar en cuerpo técnico
+- Módulo `Sesiones de entrenamiento` (`/training-sessions`) conectado a Supabase:
+  - listado en cards
+  - crear/editar
+  - duración calculada automáticamente (`hora fin - hora inicio`)
+  - estado inicial `PROGRAMMED`
+  - campos con validación obligatoria:
+    - título
+    - fecha inicio / fecha fin
+    - hora inicio / hora fin (selector de hora en formato 24h)
+    - equipo
+    - ubicación
+  - entrenador asignado opcional
+  - catálogos dinámicos desde backend:
+    - equipos activos
+    - sedes activas
+    - entrenadores activos

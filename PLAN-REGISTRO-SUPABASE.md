@@ -138,6 +138,32 @@ Este documento aterriza tareas concretas para la HU:
    - Técnico principal no puede estar en cuerpo técnico.
    - No repetir técnico en cuerpo técnico del mismo equipo.
 
+## 2.10 Sesiones de entrenamiento (`/training-sessions`)
+
+1. Integrar módulo de sesiones con Supabase (sin mocks).
+2. Funcionalidades:
+   - Listar sesiones del club autenticado.
+   - Crear sesión.
+   - Editar sesión.
+3. Campos requeridos:
+   - `title`
+   - `startDate`
+   - `endDate`
+   - `startTime`
+   - `endTime`
+   - `teamId`
+   - `locationId`
+4. Campo opcional:
+   - `coachId`
+5. Reglas:
+   - `durationMinutes` se calcula automáticamente (`end - start`).
+   - `end` debe ser mayor que `start`.
+   - Estado inicial en BD: `PROGRAMMED`.
+6. Catálogos:
+   - Equipos activos desde `TeamsService`.
+   - Sedes activas desde `VenuesService`.
+   - Entrenadores activos desde `TrainersService`.
+
 ## 3) Tareas concretas (backend Supabase)
 
 1. Crear tablas: `profiles`, `clubs`, `club_members`, `system_admins`.
@@ -769,6 +795,129 @@ $$;
 grant execute on function public.create_tenant_after_confirmation(uuid, text, text) to authenticated;
 ```
 
+```sql
+-- 10) Tabla training_sessions (HU-13)
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'training_session_status'
+      and n.nspname = 'public'
+  ) then
+    create type public.training_session_status as enum ('PROGRAMMED');
+  end if;
+end $$;
+
+create table if not exists public.training_sessions (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  title text not null check (length(trim(title)) >= 3),
+  start_date date not null,
+  end_date date not null,
+  start_time time not null,
+  end_time time not null,
+  duration_minutes integer not null check (duration_minutes > 0),
+  team_id uuid not null references public.teams(id),
+  location_id uuid not null references public.venues(id),
+  coach_id uuid null references public.trainers(id),
+  status public.training_session_status not null default 'PROGRAMMED',
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'training_sessions_time_range_chk'
+  ) then
+    alter table public.training_sessions
+      add constraint training_sessions_time_range_chk
+      check ((end_date + end_time) > (start_date + start_time));
+  end if;
+end $$;
+
+create index if not exists idx_training_sessions_club_id on public.training_sessions(club_id);
+create index if not exists idx_training_sessions_team_id on public.training_sessions(team_id);
+create index if not exists idx_training_sessions_location_id on public.training_sessions(location_id);
+create index if not exists idx_training_sessions_coach_id on public.training_sessions(coach_id);
+create index if not exists idx_training_sessions_start_date on public.training_sessions(start_date);
+create index if not exists idx_training_sessions_deleted_at on public.training_sessions(deleted_at);
+
+drop trigger if exists trg_training_sessions_set_updated_at on public.training_sessions;
+create trigger trg_training_sessions_set_updated_at
+before update on public.training_sessions
+for each row
+execute function public.set_updated_at();
+```
+
+```sql
+-- 11) RLS/policies para training_sessions
+alter table public.training_sessions enable row level security;
+
+drop policy if exists training_sessions_select on public.training_sessions;
+drop policy if exists training_sessions_insert on public.training_sessions;
+drop policy if exists training_sessions_update on public.training_sessions;
+drop policy if exists training_sessions_delete on public.training_sessions;
+
+create policy training_sessions_select
+on public.training_sessions
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = training_sessions.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+create policy training_sessions_insert
+on public.training_sessions
+for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = training_sessions.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+create policy training_sessions_update
+on public.training_sessions
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = training_sessions.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = training_sessions.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+create policy training_sessions_delete
+on public.training_sessions
+for delete
+to authenticated
+using (false);
+```
+
 ## 5) Notas sobre cascade delete (clave)
 
 - `ON DELETE CASCADE` en `profiles` y `club_members` evita registros huérfanos cuando se elimina un usuario de `auth.users`.
@@ -810,5 +959,8 @@ grant execute on function public.create_tenant_after_confirmation(uuid, text, te
 - [x] Módulo `teams` integrado con Supabase (sin mocks).
 - [x] Esquema relacional `teams` + `team_staff_members` definido.
 - [x] SQL + RLS de `teams` documentado para ejecución en Supabase.
+- [x] Módulo `training-sessions` integrado con Supabase (sin mocks).
+- [x] SQL + RLS de `training_sessions` documentado para ejecución en Supabase.
+- [x] Selector de hora en 24h para sesión (inicio/fin).
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

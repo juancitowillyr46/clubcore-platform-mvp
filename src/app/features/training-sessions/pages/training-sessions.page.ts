@@ -9,8 +9,14 @@ import { MessageModule } from 'primeng/message';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { Team } from '../../teams/models/team.model';
+import { TeamsService } from '../../teams/services/teams.service';
+import { Trainer } from '../../trainers/models/trainer.model';
+import { TrainersService } from '../../trainers/services/trainers.service';
+import { Venue } from '../../venues/models/venue.model';
+import { VenuesService } from '../../venues/services/venues.service';
 import { TrainingSession, TrainingSessionInput } from '../models/training-session.model';
-import { TrainingSessionsMockService } from '../services/training-sessions-mock.service';
+import { TrainingSessionsService } from '../services/training-sessions.service';
 
 type SortOption = 'created_desc' | 'created_asc' | 'title_asc' | 'title_desc';
 
@@ -42,10 +48,16 @@ interface SelectItem {
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <input pInputText [value]="searchTerm()" (input)="onSearchChange($event)" class="w-full lg:col-span-2" placeholder="Buscar por título..." />
                     <p-select [options]="sortOptions" optionLabel="label" optionValue="value" [ngModel]="sortBy()" (onChange)="onSortChange($event.value)" class="w-full"></p-select>
-                    <p-button label="Nueva sesión" icon="pi pi-plus" [disabled]="loading()" (onClick)="openCreateDialog()"></p-button>
+                    <p-button label="Nueva sesión" icon="pi pi-plus" [disabled]="loading() || !canCreateSession()" (onClick)="openCreateDialog()"></p-button>
                 </div>
                 <p class="text-sm text-muted-color m-0">{{ filteredSessions().length }} sesiones</p>
             </div>
+
+            @if (!canCreateSession() && !loading()) {
+                <div class="mb-4">
+                    <p-message severity="warn" text="Para crear sesiones necesitas al menos un equipo y una sede activos."></p-message>
+                </div>
+            }
 
             @if (loading()) {
                 <div class="p-5 rounded-xl border border-dashed border-surface-300 dark:border-surface-700 text-center text-muted-color">Cargando sesiones...</div>
@@ -64,8 +76,8 @@ interface SelectItem {
                             </div>
 
                             <div class="text-sm text-muted-color space-y-1 mb-4">
-                                <p class="m-0">Equipo: {{ optionLabel(teamOptions, session.teamId, 'Sin equipo') }}</p>
-                                <p class="m-0">Ubicación: {{ optionLabel(locationOptions, session.locationId, 'Sin ubicación') }}</p>
+                                <p class="m-0">Equipo: {{ optionLabel(teamOptions(), session.teamId, 'Sin equipo') }}</p>
+                                <p class="m-0">Ubicación: {{ optionLabel(locationOptions(), session.locationId, 'Sin ubicación') }}</p>
                                 <p class="m-0">Duración: {{ session.durationMinutes }} min</p>
                             </div>
 
@@ -123,15 +135,15 @@ interface SelectItem {
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Equipo *</label>
-                        <p-select [options]="teamOptions" optionLabel="label" optionValue="value" formControlName="teamId" [appendTo]="'body'" class="w-full"></p-select>
+                        <p-select [options]="teamOptions()" optionLabel="label" optionValue="value" formControlName="teamId" [appendTo]="'body'" class="w-full"></p-select>
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Ubicación *</label>
-                        <p-select [options]="locationOptions" optionLabel="label" optionValue="value" formControlName="locationId" [appendTo]="'body'" class="w-full"></p-select>
+                        <p-select [options]="locationOptions()" optionLabel="label" optionValue="value" formControlName="locationId" [appendTo]="'body'" class="w-full"></p-select>
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Entrenador asignado</label>
-                        <p-select [options]="coachOptions" optionLabel="label" optionValue="value" formControlName="coachId" [appendTo]="'body'" [showClear]="true" class="w-full"></p-select>
+                        <p-select [options]="coachOptions()" optionLabel="label" optionValue="value" formControlName="coachId" [appendTo]="'body'" [showClear]="true" class="w-full"></p-select>
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Duración (min)</label>
@@ -156,7 +168,10 @@ interface SelectItem {
     `
 })
 export class TrainingSessionsPage {
-    private readonly sessionsService = inject(TrainingSessionsMockService);
+    private readonly sessionsService = inject(TrainingSessionsService);
+    private readonly venuesService = inject(VenuesService);
+    private readonly teamsService = inject(TeamsService);
+    private readonly trainersService = inject(TrainersService);
     private readonly fb = inject(FormBuilder);
 
     readonly allSessions = signal<TrainingSession[]>([]);
@@ -178,21 +193,9 @@ export class TrainingSessionsPage {
         { label: 'Título A-Z', value: 'title_asc' as SortOption },
         { label: 'Título Z-A', value: 'title_desc' as SortOption }
     ];
-    readonly teamOptions: SelectItem[] = [
-        { label: 'Sub-8', value: 'team-u8' },
-        { label: 'Sub-10', value: 'team-u10' },
-        { label: 'Sub-12', value: 'team-u12' }
-    ];
-    readonly locationOptions: SelectItem[] = [
-        { label: 'Cancha Principal', value: 'field-1' },
-        { label: 'Cancha Alterna', value: 'field-2' },
-        { label: 'Cancha Sintética', value: 'field-3' }
-    ];
-    readonly coachOptions: SelectItem[] = [
-        { label: 'Oscar Torres', value: 'coach-1' },
-        { label: 'Andrea Perez', value: 'coach-2' },
-        { label: 'Carlos Vega', value: 'coach-3' }
-    ];
+    readonly teamOptions = signal<SelectItem[]>([]);
+    readonly locationOptions = signal<SelectItem[]>([]);
+    readonly coachOptions = signal<SelectItem[]>([]);
 
     readonly sessionForm = this.fb.nonNullable.group({
         title: ['', [Validators.required, Validators.minLength(3)]],
@@ -215,6 +218,7 @@ export class TrainingSessionsPage {
     readonly pagedSessions = computed(() => this.filteredSessions().slice(this.first(), this.first() + this.rows()));
 
     constructor() {
+        this.loadDependencies();
         this.loadSessions();
     }
 
@@ -237,6 +241,10 @@ export class TrainingSessionsPage {
         if (!this.sessionForm.controls.endDate.value && this.sessionForm.controls.startDate.value) {
             this.sessionForm.patchValue({ endDate: this.sessionForm.controls.startDate.value });
         }
+    }
+
+    canCreateSession(): boolean {
+        return this.teamOptions().length > 0 && this.locationOptions().length > 0;
     }
 
     computedDurationLabel(): string {
@@ -356,6 +364,22 @@ export class TrainingSessionsPage {
         }
     }
 
+    private async loadDependencies(): Promise<void> {
+        try {
+            const [venues, teams, trainers] = await Promise.all([this.venuesService.list(), this.teamsService.list(), this.trainersService.list()]);
+
+            const activeVenues = venues.filter((item) => item.isActive);
+            const activeTeams = teams.filter((item) => item.isActive);
+            const activeTrainers = trainers.filter((item) => item.isActive);
+
+            this.locationOptions.set(this.mapVenueOptions(activeVenues));
+            this.teamOptions.set(this.mapTeamOptions(activeTeams));
+            this.coachOptions.set(this.mapTrainerOptions(activeTrainers));
+        } catch (error) {
+            this.pageErrors.set([this.normalizeError(error)]);
+        }
+    }
+
     private computeDurationMinutes(startDate: Date | null, endDate: Date | null, startTime: Date | null, endTime: Date | null): number {
         if (!startDate || !endDate || !startTime || !endTime) return 0;
 
@@ -425,6 +449,18 @@ export class TrainingSessionsPage {
         if (this.sessionForm.controls.teamId.errors?.['required']) errors.push('El equipo es obligatorio.');
         if (this.sessionForm.controls.locationId.errors?.['required']) errors.push('La ubicación es obligatoria.');
         return errors;
+    }
+
+    private mapVenueOptions(venues: Venue[]): SelectItem[] {
+        return venues.map((item) => ({ label: item.name, value: item.id }));
+    }
+
+    private mapTeamOptions(teams: Team[]): SelectItem[] {
+        return teams.map((item) => ({ label: item.name, value: item.id }));
+    }
+
+    private mapTrainerOptions(trainers: Trainer[]): SelectItem[] {
+        return trainers.map((item) => ({ label: `${item.firstName} ${item.lastName}`.trim(), value: item.id }));
     }
 
     private normalizeError(error: unknown): string {

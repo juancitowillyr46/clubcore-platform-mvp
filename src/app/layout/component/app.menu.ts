@@ -54,7 +54,8 @@ export class AppMenu {
                     { label: 'Categorías', icon: 'pi pi-fw pi-tags', routerLink: ['/categories'] },
                     { label: 'Entrenadores', icon: 'pi pi-fw pi-users', routerLink: ['/trainers'] },
                     { label: 'Jugadores', icon: 'pi pi-fw pi-user-plus', routerLink: ['/players'] },
-                    { label: 'Equipos', icon: 'pi pi-fw pi-sitemap', routerLink: ['/teams'] }
+                    { label: 'Equipos', icon: 'pi pi-fw pi-sitemap', routerLink: ['/teams'] },
+                    { label: 'Sesiones', icon: 'pi pi-fw pi-calendar', routerLink: ['/training-sessions'] }
                 ]
             },
             {

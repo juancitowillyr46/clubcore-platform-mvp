@@ -1,17 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { DatePickerModule } from 'primeng/datepicker';
 import { FileSelectEvent, FileUploadModule } from 'primeng/fileupload';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { TeamsService } from '../../teams/services/teams.service';
+import { VenuesService } from '../../venues/services/venues.service';
 import { Player, PlayerGuardian, PlayerInput } from '../models/player.model';
-import { PlayersMockService } from '../services/players-mock.service';
+import { PlayersService } from '../services/players.service';
 
 type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
 
@@ -23,7 +26,7 @@ interface SelectItem {
 @Component({
     selector: 'app-players-page',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, MessageModule, ButtonModule, DialogModule, FileUploadModule, PaginatorModule, TagModule, CheckboxModule, SelectModule],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, MessageModule, ButtonModule, DialogModule, DatePickerModule, FileUploadModule, PaginatorModule, TagModule, CheckboxModule, SelectModule],
     styles: [
         `
             :host ::ng-deep .player-photo-upload .p-fileupload-file-name,
@@ -133,10 +136,16 @@ interface SelectItem {
                                 <div><label class="block mb-2 text-sm font-medium">Nombre completo *</label><input pInputText formControlName="firstName" class="w-full" placeholder="Mateo" /></div>
                                 <div><label class="block mb-2 text-sm font-medium">Apellido paterno *</label><input pInputText formControlName="lastName" class="w-full" placeholder="Gomez" /></div>
                                 <div><label class="block mb-2 text-sm font-medium">Apellido materno</label><input pInputText formControlName="middleName" class="w-full" placeholder="Lopez" /></div>
-                                <div><label class="block mb-2 text-sm font-medium">Fecha de nacimiento</label><input pInputText type="date" formControlName="birthDate" class="w-full" /></div>
+                                <div>
+                                    <label class="block mb-2 text-sm font-medium">Fecha de nacimiento</label>
+                                    <p-datepicker formControlName="birthDate" [showIcon]="true" [appendTo]="'body'" dateFormat="dd/mm/yy" inputStyleClass="w-full" styleClass="w-full"></p-datepicker>
+                                </div>
                                 <div><label class="block mb-2 text-sm font-medium">Email</label><input pInputText formControlName="email" class="w-full" placeholder="jugador@club.com" /></div>
                                 <div><label class="block mb-2 text-sm font-medium">Telefono</label><input pInputText formControlName="phone" class="w-full" placeholder="+57 300 000 0000" /></div>
-                                <div><label class="block mb-2 text-sm font-medium">Nacionalidad</label><input pInputText formControlName="nationality" class="w-full" placeholder="Colombiana" /></div>
+                                <div>
+                                    <label class="block mb-2 text-sm font-medium">Nacionalidad</label>
+                                    <p-select [options]="nationalityOptions" optionLabel="label" optionValue="value" formControlName="nationality" [appendTo]="'body'" class="w-full"></p-select>
+                                </div>
                                 <div><label class="block mb-2 text-sm font-medium">N° carnet de jugador</label><input pInputText formControlName="playerCardNumber" class="w-full" placeholder="CCM-001" /></div>
                             </div>
                         </section>
@@ -168,7 +177,10 @@ interface SelectItem {
                                             <div><label class="block mb-2 text-sm font-medium">Email</label><input pInputText [ngModel]="guardian.email" (ngModelChange)="updateGuardian($index, 'email', $event)" [ngModelOptions]="{ standalone: true }" class="w-full" /></div>
                                             <div><label class="block mb-2 text-sm font-medium">Telefono *</label><input pInputText [ngModel]="guardian.phone" (ngModelChange)="updateGuardian($index, 'phone', $event)" [ngModelOptions]="{ standalone: true }" class="w-full" /></div>
                                             <div class="flex items-center justify-between">
-                                                <p-checkbox [binary]="true" [ngModel]="guardian.isPrimary" (onChange)="setPrimaryGuardian($index, !!$event.checked)" [ngModelOptions]="{ standalone: true }" label="Tutor principal"></p-checkbox>
+                                                <div class="flex items-center gap-2">
+                                                    <p-checkbox [binary]="true" [ngModel]="guardian.isPrimary" (onChange)="setPrimaryGuardian($index, !!$event.checked)" [ngModelOptions]="{ standalone: true }"></p-checkbox>
+                                                    <span class="text-sm">Tutor principal</span>
+                                                </div>
                                                 <p-button icon="pi pi-trash" severity="danger" [outlined]="true" (onClick)="removeGuardian($index)"></p-button>
                                             </div>
                                         </div>
@@ -204,8 +216,10 @@ interface SelectItem {
         </p-dialog>
     `
 })
-export class PlayersPage {
-    private readonly playersService = inject(PlayersMockService);
+export class PlayersPage implements OnInit {
+    private readonly playersService = inject(PlayersService);
+    private readonly venuesService = inject(VenuesService);
+    private readonly teamsService = inject(TeamsService);
     private readonly fb = inject(FormBuilder);
 
     readonly allPlayers = signal<Player[]>([]);
@@ -226,15 +240,8 @@ export class PlayersPage {
         { label: 'Nombre A-Z', value: 'name_asc' as SortOption },
         { label: 'Nombre Z-A', value: 'name_desc' as SortOption }
     ];
-    readonly venueOptions: SelectItem[] = [
-        { label: 'Sede Central', value: 'venue-central' },
-        { label: 'Sede Norte', value: 'venue-norte' }
-    ];
-    readonly teamOptions: SelectItem[] = [
-        { label: 'Sub-8', value: 'team-u8' },
-        { label: 'Sub-10', value: 'team-u10' },
-        { label: 'Sub-12', value: 'team-u12' }
-    ];
+    venueOptions: SelectItem[] = [];
+    teamOptions: SelectItem[] = [];
     readonly positionOptions: SelectItem[] = [
         { label: 'Portero', value: 'Portero' },
         { label: 'Defensa', value: 'Defensa' },
@@ -245,6 +252,17 @@ export class PlayersPage {
         { label: 'Derecho', value: 'Derecho' },
         { label: 'Izquierdo', value: 'Izquierdo' },
         { label: 'Ambidiestro', value: 'Ambidiestro' }
+    ];
+    readonly nationalityOptions: SelectItem[] = [
+        { label: 'Colombiana', value: 'Colombiana' },
+        { label: 'Argentina', value: 'Argentina' },
+        { label: 'Chilena', value: 'Chilena' },
+        { label: 'Ecuatoriana', value: 'Ecuatoriana' },
+        { label: 'Mexicana', value: 'Mexicana' },
+        { label: 'Peruana', value: 'Peruana' },
+        { label: 'Uruguaya', value: 'Uruguaya' },
+        { label: 'Venezolana', value: 'Venezolana' },
+        { label: 'Otra', value: 'Otra' }
     ];
 
     showFormDialog = false;
@@ -260,7 +278,7 @@ export class PlayersPage {
         firstName: ['', [Validators.required, Validators.minLength(2)]],
         lastName: ['', [Validators.required, Validators.minLength(2)]],
         middleName: [''],
-        birthDate: [''],
+        birthDate: [null as Date | null],
         email: ['', [Validators.email]],
         phone: [''],
         nationality: [''],
@@ -285,8 +303,9 @@ export class PlayersPage {
         return this.filteredPlayers().slice(start, end);
     });
 
-    constructor() {
-        this.loadPlayers();
+    async ngOnInit(): Promise<void> {
+        await this.loadDependencies();
+        await this.loadPlayers();
     }
 
     onSearchChange(event: Event): void {
@@ -306,7 +325,21 @@ export class PlayersPage {
 
     openCreateDialog(): void {
         this.editingPlayerId.set(null);
-        this.playerForm.reset({ firstName: '', lastName: '', middleName: '', birthDate: '', email: '', phone: '', nationality: '', playerCardNumber: '', photoUrl: '', position: '', dominantFoot: '', venueId: '', teamId: '' });
+        this.playerForm.reset({
+            firstName: '',
+            lastName: '',
+            middleName: '',
+            birthDate: null,
+            email: '',
+            phone: '',
+            nationality: '',
+            playerCardNumber: '',
+            photoUrl: '',
+            position: '',
+            dominantFoot: '',
+            venueId: this.venueOptions.length === 1 ? this.venueOptions[0].value : '',
+            teamId: this.teamOptions.length === 1 ? this.teamOptions[0].value : ''
+        });
         this.guardians.set([]);
         this.currentPhotoPreview.set('');
         this.formErrors.set([]);
@@ -320,7 +353,7 @@ export class PlayersPage {
             firstName: player.firstName,
             lastName: player.lastName,
             middleName: player.middleName,
-            birthDate: player.birthDate,
+            birthDate: this.parseIsoDate(player.birthDate),
             email: player.email,
             phone: player.phone,
             nationality: player.nationality,
@@ -416,6 +449,7 @@ export class PlayersPage {
         this.saving.set(true);
         const payload: PlayerInput = {
             ...this.playerForm.getRawValue(),
+            birthDate: this.toIsoDateString(this.playerForm.controls.birthDate.value),
             photoUrl: this.currentPhotoPreview() || this.playerForm.controls.photoUrl.value,
             guardians: this.guardians().map((item) => ({ ...item, fullName: item.fullName.trim(), lastName: item.lastName.trim(), middleName: item.middleName.trim(), email: item.email.trim(), phone: item.phone.trim() }))
         };
@@ -569,13 +603,39 @@ export class PlayersPage {
         return 'No fue posible completar la operacion de jugadores.';
     }
 
+    private toIsoDateString(value: Date | null): string {
+        if (!value) return '';
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    private parseIsoDate(value: string): Date | null {
+        if (!value) return null;
+        const [year, month, day] = value.split('-').map((part) => Number(part));
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day);
+    }
+
     private async loadPlayers(): Promise<void> {
-        this.loading.set(true);
         this.pageErrors.set([]);
         try {
             this.allPlayers.set(await this.playersService.list());
         } catch (error) {
             this.allPlayers.set([]);
+            this.pageErrors.set([this.normalizeError(error)]);
+        }
+    }
+
+    private async loadDependencies(): Promise<void> {
+        this.loading.set(true);
+        this.pageErrors.set([]);
+        try {
+            const [venues, teams] = await Promise.all([this.venuesService.list(), this.teamsService.list()]);
+            this.venueOptions = venues.filter((item) => item.isActive).map((item) => ({ label: item.name, value: item.id }));
+            this.teamOptions = teams.filter((item) => item.isActive).map((item) => ({ label: item.name, value: item.id }));
+        } catch (error) {
             this.pageErrors.set([this.normalizeError(error)]);
         } finally {
             this.loading.set(false);

@@ -10,6 +10,7 @@ import { onboardingPageGuard } from './app/core/guards/onboarding-page.guard';
 import { ProfileClubOnboardingPage } from './app/features/onboarding/pages/profile-club-onboarding.page';
 import { PlayersPage } from './app/features/players/pages/players.page';
 import { CategoriesPage } from './app/features/categories/pages/categories.page';
+import { TrainingSessionsPage } from './app/features/training-sessions/pages/training-sessions.page';
 import { TrainersPage } from './app/features/trainers/pages/trainers.page';
 import { TeamsPage } from './app/features/teams/pages/teams.page';
 import { VenuesPage } from './app/features/venues/pages/venues.page';
@@ -29,6 +30,7 @@ export const appRoutes: Routes = [
             { path: 'trainers', component: TrainersPage, canActivate: [onboardingCompleteGuard] },
             { path: 'players', component: PlayersPage, canActivate: [onboardingCompleteGuard] },
             { path: 'teams', component: TeamsPage, canActivate: [onboardingCompleteGuard] },
+            { path: 'training-sessions', component: TrainingSessionsPage, canActivate: [onboardingCompleteGuard] },
             { path: 'onboarding/profile-club', component: ProfileClubOnboardingPage, canActivate: [onboardingPageGuard] }
         ]
     },

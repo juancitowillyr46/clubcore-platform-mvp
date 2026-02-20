@@ -99,11 +99,27 @@ interface SelectItem {
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Hora inicio *</label>
-                        <input pInputText type="time" formControlName="startTime" class="w-full" />
+                        <p-datepicker
+                            formControlName="startTime"
+                            [timeOnly]="true"
+                            hourFormat="24"
+                            [showIcon]="true"
+                            [appendTo]="'body'"
+                            inputStyleClass="w-full"
+                            styleClass="w-full"
+                        ></p-datepicker>
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Hora fin *</label>
-                        <input pInputText type="time" formControlName="endTime" class="w-full" />
+                        <p-datepicker
+                            formControlName="endTime"
+                            [timeOnly]="true"
+                            hourFormat="24"
+                            [showIcon]="true"
+                            [appendTo]="'body'"
+                            inputStyleClass="w-full"
+                            styleClass="w-full"
+                        ></p-datepicker>
                     </div>
                     <div>
                         <label class="block mb-2 text-sm font-medium">Equipo *</label>
@@ -182,8 +198,8 @@ export class TrainingSessionsPage {
         title: ['', [Validators.required, Validators.minLength(3)]],
         startDate: [null as Date | null, [Validators.required]],
         endDate: [null as Date | null, [Validators.required]],
-        startTime: ['', [Validators.required]],
-        endTime: ['', [Validators.required]],
+        startTime: [null as Date | null, [Validators.required]],
+        endTime: [null as Date | null, [Validators.required]],
         teamId: ['', [Validators.required]],
         locationId: ['', [Validators.required]],
         coachId: ['']
@@ -239,8 +255,8 @@ export class TrainingSessionsPage {
             title: '',
             startDate: null,
             endDate: null,
-            startTime: '',
-            endTime: '',
+            startTime: null,
+            endTime: null,
             teamId: '',
             locationId: '',
             coachId: ''
@@ -255,8 +271,8 @@ export class TrainingSessionsPage {
             title: session.title,
             startDate: this.parseIsoDate(session.startDate),
             endDate: this.parseIsoDate(session.endDate),
-            startTime: session.startTime,
-            endTime: session.endTime,
+            startTime: this.parseTime(session.startTime),
+            endTime: this.parseTime(session.endTime),
             teamId: session.teamId,
             locationId: session.locationId,
             coachId: session.coachId
@@ -292,8 +308,8 @@ export class TrainingSessionsPage {
             title: this.sessionForm.controls.title.value.trim(),
             startDate: this.toIsoDate(this.sessionForm.controls.startDate.value),
             endDate: this.toIsoDate(this.sessionForm.controls.endDate.value),
-            startTime: this.sessionForm.controls.startTime.value,
-            endTime: this.sessionForm.controls.endTime.value,
+            startTime: this.toTime(this.sessionForm.controls.startTime.value),
+            endTime: this.toTime(this.sessionForm.controls.endTime.value),
             durationMinutes: duration,
             teamId: this.sessionForm.controls.teamId.value,
             locationId: this.sessionForm.controls.locationId.value,
@@ -340,12 +356,13 @@ export class TrainingSessionsPage {
         }
     }
 
-    private computeDurationMinutes(startDate: Date | null, endDate: Date | null, startTime: string, endTime: string): number {
+    private computeDurationMinutes(startDate: Date | null, endDate: Date | null, startTime: Date | null, endTime: Date | null): number {
         if (!startDate || !endDate || !startTime || !endTime) return 0;
 
-        const [startHour, startMinute] = startTime.split(':').map((part) => Number(part));
-        const [endHour, endMinute] = endTime.split(':').map((part) => Number(part));
-        if ([startHour, startMinute, endHour, endMinute].some((item) => Number.isNaN(item))) return 0;
+        const startHour = startTime.getHours();
+        const startMinute = startTime.getMinutes();
+        const endHour = endTime.getHours();
+        const endMinute = endTime.getMinutes();
 
         const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), startHour, startMinute, 0, 0);
         const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endHour, endMinute, 0, 0);
@@ -358,6 +375,22 @@ export class TrainingSessionsPage {
         const [year, month, day] = value.split('-').map((part) => Number(part));
         if (!year || !month || !day) return null;
         return new Date(year, month - 1, day);
+    }
+
+    private parseTime(value: string): Date | null {
+        if (!value) return null;
+        const [hour, minute] = value.split(':').map((part) => Number(part));
+        if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+        const date = new Date();
+        date.setHours(hour, minute, 0, 0);
+        return date;
+    }
+
+    private toTime(value: Date | null): string {
+        if (!value) return '';
+        const hour = String(value.getHours()).padStart(2, '0');
+        const minute = String(value.getMinutes()).padStart(2, '0');
+        return `${hour}:${minute}`;
     }
 
     private toIsoDate(value: Date | null): string {

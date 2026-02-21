@@ -161,8 +161,22 @@ Este documento aterriza tareas concretas para la HU:
    - Estado inicial en BD: `PROGRAMMED`.
 6. Catálogos:
    - Equipos activos desde `TeamsService`.
-   - Sedes activas desde `VenuesService`.
+   - Ubicaciones activas desde `FieldLocationsService`.
    - Entrenadores activos desde `TrainersService`.
+
+## 2.11 Ubicaciones de canchas (`/field-locations`)
+
+1. Integrar módulo de ubicaciones con Supabase (sin mocks).
+2. CRUD:
+   - Listar ubicaciones del club autenticado.
+   - Crear ubicación.
+   - Editar ubicación existente.
+   - Dar de baja lógica (`is_active = false`).
+3. Campos obligatorios:
+   - `name`
+   - `address`
+4. Uso transversal:
+   - El selector de ubicación de `training-sessions` consume este catálogo.
 
 ## 3) Tareas concretas (backend Supabase)
 
@@ -255,6 +269,22 @@ create index if not exists idx_venues_club_id on public.venues(club_id);
 create unique index if not exists ux_venues_default_per_club
 on public.venues(club_id)
 where is_default = true and is_active = true;
+```
+
+```sql
+-- 5.1.1) Tabla field_locations (canchas alquiladas)
+create table if not exists public.field_locations (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references public.clubs(id) on delete cascade,
+  name text not null,
+  address text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_field_locations_club_id on public.field_locations(club_id);
+create index if not exists idx_field_locations_club_active on public.field_locations(club_id, is_active);
 ```
 
 ```sql
@@ -388,6 +418,7 @@ alter table public.clubs enable row level security;
 alter table public.club_members enable row level security;
 alter table public.system_admins enable row level security;
 alter table public.venues enable row level security;
+alter table public.field_locations enable row level security;
 alter table public.categories enable row level security;
 alter table public.trainers enable row level security;
 alter table public.teams enable row level security;
@@ -521,6 +552,56 @@ using (
     select 1
     from public.club_members cm
     where cm.club_id = categories.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "field_locations_select_member" on public.field_locations;
+create policy "field_locations_select_member"
+on public.field_locations
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = field_locations.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "field_locations_insert_member" on public.field_locations;
+create policy "field_locations_insert_member"
+on public.field_locations
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = field_locations.club_id
+      and cm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "field_locations_update_member" on public.field_locations;
+create policy "field_locations_update_member"
+on public.field_locations
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = field_locations.club_id
+      and cm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = field_locations.club_id
       and cm.user_id = auth.uid()
   )
 );
@@ -820,7 +901,7 @@ create table if not exists public.training_sessions (
   end_time time not null,
   duration_minutes integer not null check (duration_minutes > 0),
   team_id uuid not null references public.teams(id),
-  location_id uuid not null references public.venues(id),
+  location_id uuid not null references public.field_locations(id),
   coach_id uuid null references public.trainers(id),
   status public.training_session_status not null default 'PROGRAMMED',
   created_by uuid not null references auth.users(id) on delete cascade,
@@ -962,5 +1043,7 @@ using (false);
 - [x] Módulo `training-sessions` integrado con Supabase (sin mocks).
 - [x] SQL + RLS de `training_sessions` documentado para ejecución en Supabase.
 - [x] Selector de hora en 24h para sesión (inicio/fin).
+- [x] Módulo `field-locations` integrado con Supabase (sin mocks).
+- [x] SQL + RLS de `field_locations` documentado para ejecución en Supabase.
 - [x] Flujo validado end-to-end.
 - [ ] Tests básicos de integración/documentados.

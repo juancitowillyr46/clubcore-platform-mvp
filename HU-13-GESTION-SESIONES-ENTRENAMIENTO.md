@@ -66,7 +66,7 @@ No incluido en esta HU:
   - `update()`
 - Fuente de catálogos:
   - equipos: `TeamsService`
-  - sedes: `VenuesService`
+  - ubicaciones de canchas: `FieldLocationsService`
   - entrenadores: `TrainersService`
 - Restricción por club mediante `club_members` + sesión activa.
 

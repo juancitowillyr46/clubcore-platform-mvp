@@ -77,6 +77,10 @@ src/app/
 │   │   ├── models/
 │   │   ├── services/
 │   │   └── pages/
+│   ├── field-locations/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── pages/
 │   └── venues/
 │       ├── models/
 │       ├── pages/
@@ -176,5 +180,10 @@ App disponible en:
   - entrenador asignado opcional
   - catálogos dinámicos desde backend:
     - equipos activos
-    - sedes activas
+    - ubicaciones activas (canchas)
     - entrenadores activos
+- Módulo `Ubicaciones` (`/field-locations`) conectado a Supabase:
+  - listado en cards
+  - crear/editar
+  - baja lógica (`is_active`)
+  - búsqueda, ordenamiento y paginación

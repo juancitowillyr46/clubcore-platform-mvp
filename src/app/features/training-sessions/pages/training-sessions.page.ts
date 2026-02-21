@@ -9,12 +9,12 @@ import { MessageModule } from 'primeng/message';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { FieldLocation } from '../../field-locations/models/field-location.model';
+import { FieldLocationsService } from '../../field-locations/services/field-locations.service';
 import { Team } from '../../teams/models/team.model';
 import { TeamsService } from '../../teams/services/teams.service';
 import { Trainer } from '../../trainers/models/trainer.model';
 import { TrainersService } from '../../trainers/services/trainers.service';
-import { Venue } from '../../venues/models/venue.model';
-import { VenuesService } from '../../venues/services/venues.service';
 import { TrainingSession, TrainingSessionInput } from '../models/training-session.model';
 import { TrainingSessionsService } from '../services/training-sessions.service';
 
@@ -55,7 +55,7 @@ interface SelectItem {
 
             @if (!canCreateSession() && !loading()) {
                 <div class="mb-4">
-                    <p-message severity="warn" text="Para crear sesiones necesitas al menos un equipo y una sede activos."></p-message>
+                    <p-message severity="warn" text="Para crear sesiones necesitas al menos un equipo y una ubicación activos."></p-message>
                 </div>
             }
 
@@ -169,7 +169,7 @@ interface SelectItem {
 })
 export class TrainingSessionsPage {
     private readonly sessionsService = inject(TrainingSessionsService);
-    private readonly venuesService = inject(VenuesService);
+    private readonly locationsService = inject(FieldLocationsService);
     private readonly teamsService = inject(TeamsService);
     private readonly trainersService = inject(TrainersService);
     private readonly fb = inject(FormBuilder);
@@ -366,13 +366,13 @@ export class TrainingSessionsPage {
 
     private async loadDependencies(): Promise<void> {
         try {
-            const [venues, teams, trainers] = await Promise.all([this.venuesService.list(), this.teamsService.list(), this.trainersService.list()]);
+            const [locations, teams, trainers] = await Promise.all([this.locationsService.list(), this.teamsService.list(), this.trainersService.list()]);
 
-            const activeVenues = venues.filter((item) => item.isActive);
+            const activeLocations = locations.filter((item) => item.isActive);
             const activeTeams = teams.filter((item) => item.isActive);
             const activeTrainers = trainers.filter((item) => item.isActive);
 
-            this.locationOptions.set(this.mapVenueOptions(activeVenues));
+            this.locationOptions.set(this.mapLocationOptions(activeLocations));
             this.teamOptions.set(this.mapTeamOptions(activeTeams));
             this.coachOptions.set(this.mapTrainerOptions(activeTrainers));
         } catch (error) {
@@ -451,8 +451,8 @@ export class TrainingSessionsPage {
         return errors;
     }
 
-    private mapVenueOptions(venues: Venue[]): SelectItem[] {
-        return venues.map((item) => ({ label: item.name, value: item.id }));
+    private mapLocationOptions(locations: FieldLocation[]): SelectItem[] {
+        return locations.map((item) => ({ label: item.name, value: item.id }));
     }
 
     private mapTeamOptions(teams: Team[]): SelectItem[] {

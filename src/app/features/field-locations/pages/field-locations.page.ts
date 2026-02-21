@@ -10,7 +10,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { FieldLocation } from '../models/field-location.model';
-import { FieldLocationsMockService } from '../services/field-locations-mock.service';
+import { FieldLocationsService } from '../services/field-locations.service';
 
 type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
 
@@ -153,7 +153,7 @@ type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc';
     `
 })
 export class FieldLocationsPage implements OnInit {
-    private readonly locationsService = inject(FieldLocationsMockService);
+    private readonly locationsService = inject(FieldLocationsService);
     private readonly fb = inject(FormBuilder);
 
     readonly allLocations = signal<FieldLocation[]>([]);
